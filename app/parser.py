@@ -6,6 +6,8 @@ import logging
 from time import sleep
 from datetime import datetime, timezone
 
+import psycopg2
+import psycopg2.extras
 import requests
 from bs4 import BeautifulSoup
 
@@ -20,7 +22,7 @@ class Parser:
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
                           " Chrome/73.0.3683.103 Safari/537.36"
         }
-        self.db = DB_TOKEN
+        self.db = DATABASE_URL
         self.selections = selections.keys()
 
     @staticmethod
@@ -72,8 +74,8 @@ class Parser:
                         item VARCHAR,
                         samples VARCHAR,
                         img VARCHAR,
-                        registered_at TIMESTAMP,
-                        status VARCHAR
+                        selection VARCHAR,
+                        registered_at TIMESTAMP
                     );
                 """)
                 db_connection.commit()
@@ -100,10 +102,10 @@ class Parser:
         price = release.find("div", attrs={"class": "price"}).text.replace("!", "!\n")
         img = release.find("img")["src"]
         release_url = release.find("a")["href"]
-        item = (f"{selections[selection]}\n"
+        item = (f"*{selections[selection]}*\n"
                 f"{section}\n\n"
-                f"{title}\n"
-                f"{label}\n\n"
+                f"*{title}*\n"
+                f"_{label}_\n\n"
                 f"{tracklist}\n"
                 f"{price}"
                 f"LINK: {release_url}")
@@ -126,9 +128,9 @@ class Parser:
                 releases = self.get_data_from_url(url)
                 for release in releases:
                     redeye_id, item, samples, img = self.combine_release_data(release, selection, section)
-                    db_cursor.execute(f"INSERT INTO {table} (redeye_id, item, samples, img, registered_at) "
-                                      f"VALUES (%s, %s, %s, %s, %s)",
-                                      (redeye_id, item, samples, img, datetime.now(timezone.utc)))
+                    db_cursor.execute(f"INSERT INTO {table} (redeye_id, item, samples, img, selection, registered_at) "
+                                      f"VALUES (%s, %s, %s, %s, %s, %s)",
+                                      (redeye_id, item, samples, img, selection, datetime.now(timezone.utc)))
                     db_connection.commit()
                     logging.debug("Data committed to DB")
 
@@ -158,17 +160,23 @@ class Parser:
                         db_cursor.execute(f"DELETE FROM {table} WHERE item_id = (SELECT MIN(item_id) FROM {table})")
                         db_connection.commit()
                         logging.info(f"The oldest release in {table} was deleted from DB to cleanup space")
-                        db_cursor.execute(f"INSERT INTO {table} (redeye_id, item, samples, img, registered_at, status) "
-                                          f"VALUES (%s, %s, %s, %s, %s, %s)",
-                                          (redeye_id, item, samples, img, datetime.now(timezone.utc), "new"))
+                        db_cursor.execute(f"INSERT INTO {table} (redeye_id, item, samples, img, selection, registered_at) "
+                                          f"VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                                          (redeye_id, item, samples, img, selection, datetime.now(timezone.utc)))
                         db_connection.commit()
                         logging.info(f"New release added to DB. Redeye ID: {redeye_id}")
+
+                        request = requests.get(f"{API_HOST}/new_release?redeye_id={redeye_id}&table={table}")
+                        if request.status_code != 200:
+                            logging.warning(f"Can not reach API! Status code: {request.status_code}")
 
         db_connection.close()
         logging.debug("Connection to DB closed")
 
 
-def run_parser():
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, filename="redeye_records_parser.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
+
     p = Parser()
     try:
         p.db_initiation()
@@ -177,4 +185,3 @@ def run_parser():
             p.check_new_releases()
     except Exception as e:
         logging.critical(e)
-        run_parser()

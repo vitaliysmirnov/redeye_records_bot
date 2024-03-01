@@ -4,20 +4,19 @@
 
 from os import environ
 
-import psycopg2
-import psycopg2.extras
+import secrets
 
 
+ADMIN_CHAT_ID = secrets.ADMIN_CHAT_ID
+BOT_TOKEN = secrets.BOT_TOKEN
+DATABASE_URL = secrets.DATABASE_URL
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
-DB_TOKEN = "postgres://bhrywlqe:qKlZv9LjFbZx-TOH559ZKPRkhd4RVc6V@surus.db.elephantsql.com/bhrywlqe"
-BOT_TOKEN = "7089771057:AAGY-y_RswUB9b_640y7QoFl8IbXffonBBo"
-ADMIN_CHAT_ID = 230217326
-APP_HOST = "http://localhost:5000/"
+APP_HOST = "http://localhost:8444/"
 API_HOST = APP_HOST + "api/v1"
 
 HOST = "0.0.0.0"
-PORT = int(environ.get("PORT", 5000))
+PORT = int(environ.get("PORT", 8444))
 
 selections = {
     "bass_music": "BASS MUSIC",
@@ -39,19 +38,33 @@ tables = {
 }
 
 """
+    CREATE TABLE config (
+        admin_chat_id VARCHAR,
+        telegram_api_token VARCHAR
+);
+"""
+"""
     CREATE TABLE users (
         user_id SERIAL PRIMARY KEY,
-        chat_id VARCHAR,
+        user_chat_id BIGINT,
         username VARCHAR,
         first_name VARCHAR,
         last_name VARCHAR,
         is_active BOOLEAN,
         registered_at TIMESTAMP
-    );
+);
 """
 """
-    CREATE TABLE config (
-        admin_chat_id VARCHAR,
-        telegram_api_token VARCHAR
+    CREATE TABLE subscriptions (
+        user_id INT,
+        bass_music BOOLEAN,
+        drum_and_bass BOOLEAN,
+        experimental BOOLEAN,
+        funk_hip_hop_soul BOOLEAN,
+        house_disco BOOLEAN,
+        reggae BOOLEAN,
+        techno_electro BOOLEAN,
+        balearic_and_downtempo BOOLEAN,
+        alternative_indie_folk_punk BOOLEAN
 );
 """
