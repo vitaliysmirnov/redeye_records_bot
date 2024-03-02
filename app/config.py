@@ -38,12 +38,6 @@ tables = {
 }
 
 """
-    CREATE TABLE config (
-        admin_chat_id VARCHAR,
-        telegram_api_token VARCHAR
-);
-"""
-"""
     CREATE TABLE users (
         user_id SERIAL PRIMARY KEY,
         user_chat_id BIGINT,

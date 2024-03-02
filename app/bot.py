@@ -2,6 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 
+import json
 import requests
 
 import telebot
@@ -78,24 +79,30 @@ def callback_query(call):
     #  get user_chat_id from message to identify user
     user_chat_id = call.from_user.id
     #  result depended on clicked button
-    if call.data == "unsub":
-        response = requests.put(f"{API_HOST}/unsub?user_chat_id={user_chat_id}")
+    if call.data == "unsubscribe":
+        data = {
+            "user_chat_id": user_chat_id
+        }
+        response = requests.put(f"{API_HOST}/unsubscribe", json=data)
     else:
-        selection = call.data
-        response = requests.put(f"{API_HOST}/subscribe?user_chat_id={user_chat_id}&selection={selection}")
+        data = {
+            "user_chat_id": user_chat_id,
+            "selection": call.data
+        }
+        response = requests.put(f"{API_HOST}/subscribe", json=data)
     result = response.json()["message"]["result"]
     #  response
     bot.answer_callback_query(call.id, result)
 
 
-@bot.message_handler(commands=["unsub"])
-def command_unsub(message):
-    """/unsub command handler"""
+@bot.message_handler(commands=["unsubscribe"])
+def command_unsubscribe(message):
+    """/unsubscribe command handler"""
     bot.send_message(message.from_user.id, "Give me a second...")
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     #  use API method to start command execution
-    response = requests.put(f"{API_HOST}/unsub?user_chat_id={user_chat_id}")
+    response = requests.put(f"{API_HOST}/unsubscribe?user_chat_id={user_chat_id}")
     result = response.json()["message"]["result"]
     #  menu buttons
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -115,38 +122,38 @@ def command_help(message):
     #  text
     help_text = "*redeyerecords.co.uk* - dance music specialists since 1992\n\n\n" \
                 "*/selections* to choose selections\n\n" \
-                "*/mysubs* to get your subs\n\n" \
-                "*/unsub* to unsubscribe\n\n"
+                "*/my_subscriptions* to get your subscriptions\n\n" \
+                "*/unsubscribe* to unsubscribe\n\n"
     #  response
     bot.send_message(user_chat_id, help_text, parse_mode="Markdown", disable_notification=True)
 
 
-@bot.message_handler(commands=["mysubs"])
-def command_mysubs(message):
-    """/mysubs command handler"""
+@bot.message_handler(commands=["my_subscriptions"])
+def command_my_subscriptions(message):
+    """/my_subscriptions command handler"""
     bot.send_message(message.from_user.id, "Give me a second...")
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
-    response = requests.get(f"{API_HOST}/mysubs?user_chat_id={user_chat_id}")
+    response = requests.get(f"{API_HOST}/my_subscriptions?user_chat_id={user_chat_id}")
     #  menu buttons
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     #  result depended on API response
-    mysubs = list()
+    my_subscriptions = list()
     if response.status_code == 200:
         result = response.json()["message"]["result"]
         for key, value in result.items():
             if value:
-                mysubs.append(key)
+                my_subscriptions.append(f"*{key}*")
         #  info message depended on user's subscriptions
-        if bool(mysubs):
-            result = "You are subscribed to\n" + "\n".join(mysubs)
+        if bool(my_subscriptions):
+            result = "You're subscribed to\n\n" + "\n".join(my_subscriptions)
             keyboard.add(
                 KeyboardButton("/help"),
                 KeyboardButton("/selections"),
-                KeyboardButton("/unsub")
+                KeyboardButton("/unsubscribe")
             )
         else:
-            result = "You are not subscribed to anything yet"
+            result = "You're not subscribed to anything yet"
             keyboard.add(
                 KeyboardButton("/help"),
                 KeyboardButton("/selections")

@@ -24,7 +24,6 @@ responses = {
     409: "User already exists",
     500: "Internal Server Error"
 }
-
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 app.register_blueprint(blueprint)
@@ -82,41 +81,44 @@ class Start(Resource):
             user_id = bool(db_cursor.fetchone())
             if not user_id:
                 db_cursor.execute(
-                    """
-                    INSERT INTO users (user_chat_id, username, first_name, last_name, is_active, registered_at)
-                    VALUES (%s, %s, %s, %s, true, %s)
-                    """, (user_chat_id, username, first_name, last_name, datetime.now(timezone.utc),)
+                    f"INSERT INTO users (user_chat_id, username, first_name, last_name, is_active, registered_at) "
+                    f"VALUES (%s, %s, %s, %s, true, %s);",
+                    (user_chat_id, username, first_name, last_name, datetime.now(timezone.utc),)
                 )
                 db_connection.commit()
-                db_cursor.execute("INSERT INTO subscriptions VALUES "
-                                  "((SELECT user_id FROM users WHERE user_chat_id = %s), false, false, false, false, false, false, false, false, false)", (user_chat_id,))
+                db_cursor.execute(
+                    "INSERT INTO subscriptions VALUES "
+                    "((SELECT user_id FROM users WHERE user_chat_id = %s), "
+                    "false, false, false, false, false, false, false, false, false);", (user_chat_id,))
                 db_connection.commit()
                 response = 201
             else:
                 db_cursor.execute(
                     """
-                    UPDATE users
-                    SET username = %s,
-                        first_name = %s,
-                        last_name = %s,
-                        is_active = true
-                    WHERE user_chat_id = %s
+                        UPDATE users
+                        SET username = %s,
+                            first_name = %s,
+                            last_name = %s,
+                            is_active = true
+                        WHERE user_chat_id = %s
+                    ;
                     """, (username, first_name, last_name, user_chat_id,)
                 )
                 db_connection.commit()
                 db_cursor.execute(
                     """
-                    UPDATE subscriptions
-                    SET bass_music false,
-                        drum_and_bass false,
-                        experimental false,
-                        funk_hip_hop_soul false,
-                        house_disco false,
-                        reggae false,
-                        techno_electro false,
-                        balearic_and_downtempo false,
-                        alternative_indie_folk_punk false
-                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                        UPDATE subscriptions
+                        SET bass_music false,
+                            drum_and_bass false,
+                            experimental false,
+                            funk_hip_hop_soul false,
+                            house_disco false,
+                            reggae false,
+                            techno_electro false,
+                            balearic_and_downtempo false,
+                            alternative_indie_folk_punk false
+                        WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    ;
                     """, (user_chat_id,)
                 )
                 db_connection.commit()
@@ -141,23 +143,33 @@ class Start(Resource):
 class Subscribe(Resource):
     @api.doc(
         responses=responses,
-        params={
-            "user_chat_id": "User Telegram chat ID",
-            "selection": "Selection to follow"
-        }
+        body=api.model(
+            "Set up user's subscriptions",
+            {
+                "user_chat_id": fields.Integer(
+                    description="User's Telegram chat ID",
+                    required=True
+                ),
+                "selection": fields.String(
+                    description="Selection to follow",
+                    required=True
+                )
+            }
+        )
     )
     def put(self):
-        """Subscribe to selection"""
+        """Set up user's subscriptions"""
         try:
-            user_chat_id = int(request.args.get("user_chat_id"))
-            selection = request.args.get("selection")
+            user_chat_id = request.json["user_chat_id"]
+            selection = request.json["selection"]
             db_connection = psycopg2.connect(DATABASE_URL)
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 f"""
-                UPDATE subscriptions
-                SET {selection} = true
-                WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    UPDATE subscriptions
+                    SET {selection} = true
+                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                ;
                 """, (user_chat_id,)
             )
             db_connection.commit()
@@ -177,33 +189,40 @@ class Subscribe(Resource):
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
 
 
-@api.route("/unsub")
-class Unsub(Resource):
+@api.route("/unsubscribe")
+class Unsubscribe(Resource):
     @api.doc(
         responses=responses,
-        params={
-            "user_chat_id": "User Telegram chat ID"
-        }
+        body=api.model(
+            "Unsubscribe from all threads",
+            {
+                "user_chat_id": fields.Integer(
+                    description="User's Telegram chat ID",
+                    required=True
+                )
+            }
+        )
     )
     def put(self):
         """Unsubscribe from all threads"""
         try:
-            user_chat_id = int(request.args.get("user_chat_id"))
+            user_chat_id = request.json["user_chat_id"]
             db_connection = psycopg2.connect(DATABASE_URL)
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 """
-                UPDATE subscriptions
-                SET bass_music = false,
-                    drum_and_bass = false,
-                    experimental = false,
-                    funk_hip_hop_soul = false,
-                    house_disco = false,
-                    reggae = false,
-                    techno_electro = false,
-                    balearic_and_downtempo = false,
-                    alternative_indie_folk_punk = false
-                WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    UPDATE subscriptions
+                    SET bass_music = false,
+                        drum_and_bass = false,
+                        experimental = false,
+                        funk_hip_hop_soul = false,
+                        house_disco = false,
+                        reggae = false,
+                        techno_electro = false,
+                        balearic_and_downtempo = false,
+                        alternative_indie_folk_punk = false
+                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                ;
                 """, (user_chat_id,)
             )
             db_connection.commit()
@@ -223,33 +242,40 @@ class Unsub(Resource):
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
 
 
-@api.route("/mysubs")
-class Mysubs(Resource):
+@api.route("/my_subscriptions")
+class MySubscriptions(Resource):
     @api.doc(
         responses=responses,
-        params={
-            "user_chat_id": "User Telegram chat ID"
-        }
+        body=api.model(
+            "User's subscriptions info",
+            {
+                "user_chat_id": fields.Integer(
+                    description="User's Telegram chat ID",
+                    required=True
+                )
+            }
+        )
     )
     def get(self):
-        """Users subscriptions info"""
+        """User's subscriptions info"""
         try:
-            user_chat_id = int(request.args.get("user_chat_id"))
+            user_chat_id = request.json["user_chat_id"]
             db_connection = psycopg2.connect(DATABASE_URL)
             db_cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             db_cursor.execute(
                 """
-                SELECT bass_music,
-                       drum_and_bass,
-                       experimental,
-                       funk_hip_hop_soul,
-                       house_disco,
-                       reggae,
-                       techno_electro,
-                       balearic_and_downtempo,
-                       alternative_indie_folk_punk
-                FROM subscriptions
-                WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    SELECT bass_music,
+                           drum_and_bass,
+                           experimental,
+                           funk_hip_hop_soul,
+                           house_disco,
+                           reggae,
+                           techno_electro,
+                           balearic_and_downtempo,
+                           alternative_indie_folk_punk
+                    FROM subscriptions
+                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                ;
                 """, (user_chat_id,)
             )
             result = db_cursor.fetchone()
@@ -283,10 +309,19 @@ class Mysubs(Resource):
 class Stats(Resource):
     @api.doc(
         responses=responses,
-        params={
-            "admin_chat_id": "Admin chat ID as admin authorization",
-            "telegram_api_token": "Telegram API bot token as admin authorization"
-        }
+        body=api.model(
+            "Users statistics (available only for admin)",
+            {
+                "admin_chat_id": fields.Integer(
+                    description="Admin's Telegram chat ID",
+                    required=True
+                ),
+                "telegram_api_token": fields.String(
+                    description="Telegram Bot API Token",
+                    required=True
+                )
+            }
+        )
     )
     def get(self):
         """Users statistics (available only for admin)"""
@@ -298,62 +333,64 @@ class Stats(Resource):
                 db_cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 db_cursor.execute(
                     """
-                    SELECT t1.users_total, 
-                           t2.users_active
-                    FROM
-                    (SELECT count(user_id) AS users_total FROM users) AS t1,
-                    (SELECT count(is_active) AS users_active FROM users WHERE is_active = true) AS t2
+                        SELECT t1.users_total, 
+                               t2.users_active
+                        FROM
+                        (SELECT count(user_id) AS users_total FROM users) AS t1,
+                        (SELECT count(is_active) AS users_active FROM users WHERE is_active = true) AS t2
+                    ;
                     """
                 )
                 result_users = db_cursor.fetchall()[0]
                 db_cursor.execute(
                     """
-                    SELECT t1.bass_music_subs_active, 
-                           t2.drum_and_bass_subs_active, 
-                           t3.experimental_subs_active, 
-                           t4.funk_hip_hop_soul_subs_active, 
-                           t5.house_disco_subs_active, 
-                           t6.reggae_subs_active,
-                           t7.techno_electro_subs_active,
-                           t8.balearic_and_downtempo_subs_active,
-                           t9.alternative_indie_folk_punk_subs_active,
-                           t10.bass_music_subs_total, 
-                           t11.drum_and_bass_subs_total, 
-                           t12.experimental_subs_total, 
-                           t13.funk_hip_hop_soul_subs_total, 
-                           t14.house_disco_subs_total, 
-                           t15.reggae_subs_total, 
-                           t16.techno_electro_subs_total, 
-                           t17.balearic_and_downtempo_subs_total, 
-                           t18.alternative_indie_folk_punk_subs_total
-                    FROM
-                    (SELECT count(u.user_id) AS bass_music_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND bass_music = true) AS t1,
-                    (SELECT count(u.user_id) AS drum_and_bass_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND drum_and_bass = true) AS t2,
-                    (SELECT count(u.user_id) AS experimental_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND experimental = true) AS t3,
-                    (SELECT count(u.user_id) AS funk_hip_hop_soul_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND funk_hip_hop_soul = true) AS t4,
-                    (SELECT count(u.user_id) AS house_disco_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND house_disco = true) AS t5,
-                    (SELECT count(u.user_id) AS reggae_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND reggae = true) AS t6,
-                    (SELECT count(u.user_id) AS techno_electro_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND techno_electro = true) AS t7,
-                    (SELECT count(u.user_id) AS balearic_and_downtempo_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND balearic_and_downtempo = true) AS t8,
-                    (SELECT count(u.user_id) AS alternative_indie_folk_punk_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND alternative_indie_folk_punk = true) AS t9,
-                    (SELECT count(*) AS bass_music_subs_total FROM subscriptions WHERE bass_music = true) AS t10,
-                    (SELECT count(*) AS drum_and_bass_subs_total FROM subscriptions WHERE drum_and_bass = true) AS t11,
-                    (SELECT count(*) AS experimental_subs_total FROM subscriptions WHERE experimental = true) AS t12,
-                    (SELECT count(*) AS funk_hip_hop_soul_subs_total FROM subscriptions WHERE funk_hip_hop_soul = true) AS t13,
-                    (SELECT count(*) AS house_disco_subs_total FROM subscriptions WHERE house_disco = true) AS t14,
-                    (SELECT count(*) AS reggae_subs_total FROM subscriptions WHERE reggae = true) AS t15,
-                    (SELECT count(*) AS techno_electro_subs_total FROM subscriptions WHERE techno_electro = true) AS t16,
-                    (SELECT count(*) AS balearic_and_downtempo_subs_total FROM subscriptions WHERE balearic_and_downtempo = true) AS t17,
-                    (SELECT count(*) AS alternative_indie_folk_punk_subs_total FROM subscriptions WHERE alternative_indie_folk_punk = true) AS t18
+                        SELECT t1.bass_music_subs_active, 
+                               t2.drum_and_bass_subs_active, 
+                               t3.experimental_subs_active, 
+                               t4.funk_hip_hop_soul_subs_active, 
+                               t5.house_disco_subs_active, 
+                               t6.reggae_subs_active,
+                               t7.techno_electro_subs_active,
+                               t8.balearic_and_downtempo_subs_active,
+                               t9.alternative_indie_folk_punk_subs_active,
+                               t10.bass_music_subs_total, 
+                               t11.drum_and_bass_subs_total, 
+                               t12.experimental_subs_total, 
+                               t13.funk_hip_hop_soul_subs_total, 
+                               t14.house_disco_subs_total, 
+                               t15.reggae_subs_total, 
+                               t16.techno_electro_subs_total, 
+                               t17.balearic_and_downtempo_subs_total, 
+                               t18.alternative_indie_folk_punk_subs_total
+                        FROM
+                        (SELECT count(u.user_id) AS bass_music_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND bass_music = true) AS t1,
+                        (SELECT count(u.user_id) AS drum_and_bass_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND drum_and_bass = true) AS t2,
+                        (SELECT count(u.user_id) AS experimental_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND experimental = true) AS t3,
+                        (SELECT count(u.user_id) AS funk_hip_hop_soul_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND funk_hip_hop_soul = true) AS t4,
+                        (SELECT count(u.user_id) AS house_disco_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND house_disco = true) AS t5,
+                        (SELECT count(u.user_id) AS reggae_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND reggae = true) AS t6,
+                        (SELECT count(u.user_id) AS techno_electro_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND techno_electro = true) AS t7,
+                        (SELECT count(u.user_id) AS balearic_and_downtempo_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND balearic_and_downtempo = true) AS t8,
+                        (SELECT count(u.user_id) AS alternative_indie_folk_punk_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                            WHERE u.is_active = true AND alternative_indie_folk_punk = true) AS t9,
+                        (SELECT count(*) AS bass_music_subs_total FROM subscriptions WHERE bass_music = true) AS t10,
+                        (SELECT count(*) AS drum_and_bass_subs_total FROM subscriptions WHERE drum_and_bass = true) AS t11,
+                        (SELECT count(*) AS experimental_subs_total FROM subscriptions WHERE experimental = true) AS t12,
+                        (SELECT count(*) AS funk_hip_hop_soul_subs_total FROM subscriptions WHERE funk_hip_hop_soul = true) AS t13,
+                        (SELECT count(*) AS house_disco_subs_total FROM subscriptions WHERE house_disco = true) AS t14,
+                        (SELECT count(*) AS reggae_subs_total FROM subscriptions WHERE reggae = true) AS t15,
+                        (SELECT count(*) AS techno_electro_subs_total FROM subscriptions WHERE techno_electro = true) AS t16,
+                        (SELECT count(*) AS balearic_and_downtempo_subs_total FROM subscriptions WHERE balearic_and_downtempo = true) AS t17,
+                        (SELECT count(*) AS alternative_indie_folk_punk_subs_total FROM subscriptions WHERE alternative_indie_folk_punk = true) AS t18
+                    ;
                     """
                 )
                 result_subs = db_cursor.fetchone()
@@ -379,10 +416,19 @@ class Stats(Resource):
 class NewRelease(Resource):
     @api.doc(
         responses=responses,
-        params={
-            "redeye_id": "Redeye ID",
-            "table": "Table where release info was stored"
-        }
+        body=api.model(
+            "API waits for new release notification from parser",
+            {
+                "redeye_id": fields.Integer(
+                    description="Release's Redeye ID",
+                    required=True
+                ),
+                "table": fields.String(
+                    description="Table where release info was stored",
+                    required=True
+                )
+            }
+        )
     )
     def get(self):
         """API waits for new release notification from parser"""
@@ -395,10 +441,12 @@ class NewRelease(Resource):
             db_cursor.execute(f"SELECT item, samples, selection FROM {table} WHERE redeye_id = %s", (redeye_id,))
             item, samples, selection = db_cursor.fetchone()
 
-            db_cursor.execute(f"SELECT users.user_chat_id "
-                              f"FROM users "
-                              f"JOIN subscriptions ON subscriptions.user_id = users.user_id "
-                              f"WHERE subscriptions.{selection} = true AND users.is_active = true")
+            db_cursor.execute(
+                f"SELECT users.user_chat_id "
+                f"FROM users "
+                f"JOIN subscriptions ON subscriptions.user_id = users.user_id "
+                f"WHERE subscriptions.{selection} = true AND users.is_active = true;"
+            )
             users = [user_chat_id[0] for user_chat_id in db_cursor.fetchall()]
 
             if not bool(users):
@@ -441,9 +489,10 @@ class NewRelease(Resource):
                         if "bot was blocked by the user" in e.args[0]:
                             db_cursor.execute(
                                 """
-                                UPDATE users
-                                SET is_active = false
-                                WHERE user_chat_id = %s
+                                    UPDATE users
+                                    SET is_active = false
+                                    WHERE user_chat_id = %s
+                                ;
                                 """, (user,)
                             )
                             db_connection.commit()
