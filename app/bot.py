@@ -176,16 +176,18 @@ def command_stats(message):
     #  result depended on API response
     if response.status_code == 200:
         result = response.json()["message"]["result"]
-        stats = f"*USERS*: active {result['users']['users_active']}, total {result['users']['users_total']}\n\n" \
-                f"*BASS MUSIC*: active {result['subs']['bass_music_subs_active']}, total {result['subs']['bass_music_subs_total']}\n" \
-                f"*DRUM & BASS • JUNGLE*: active {result['subs']['drum_and_bass_subs_active']}, total {result['subs']['drum_and_bass_subs_total']}\n" \
-                f"*AMBIENT • EXPERIMENTAL • DRONE*: active {result['subs']['experimental_subs_active']}, total {result['subs']['experimental_subs_total']}\n" \
-                f"*HIP HOP • SOUL • JAZZ • FUNK*: active {result['subs']['funk_hip_hop_soul_subs_active']}, total {result['subs']['funk_hip_hop_soul_subs_total']}\n" \
-                f"*HOUSE • DISCO*: active {result['subs']['house_disco_subs_active']}, total {result['subs']['house_disco_subs_total']}\n" \
-                f"*REGGAE*: active {result['subs']['reggae_subs_active']}, total {result['subs']['reggae_subs_total']}\n" \
-                f"*TECHNO • ELECTRO*: active {result['subs']['techno_electro_subs_active']}, total {result['subs']['techno_electro_subs_total']}\n" \
-                f"*BALEARIC • DOWNTEMPO*: active {result['subs']['balearic_and_downtempo_subs_active']}, total {result['subs']['balearic_and_downtempo_subs_total']}\n" \
-                f"*ALTERNATIVE / INDIE / FOLK / PUNK*: active {result['subs']['alternative_indie_folk_punk_subs_active']}, total {result['subs']['alternative_indie_folk_punk_subs_total']}\n"
+        stats = f"""
+        *USERS*: active {result['users']['users_active']}, total {result['users']['users_total']}\n\n
+        *BASS MUSIC*: active {result['subs']['bass_music_subs_active']}, total {result['subs']['bass_music_subs_total']}\n
+        *DRUM & BASS • JUNGLE*: active {result['subs']['drum_and_bass_subs_active']}, total {result['subs']['drum_and_bass_subs_total']}\n
+        *AMBIENT • EXPERIMENTAL • DRONE*: active {result['subs']['experimental_subs_active']}, total {result['subs']['experimental_subs_total']}\n
+        *HIP HOP • SOUL • JAZZ • FUNK*: active {result['subs']['funk_hip_hop_soul_subs_active']}, total {result['subs']['funk_hip_hop_soul_subs_total']}\n
+        *HOUSE • DISCO*: active {result['subs']['house_disco_subs_active']}, total {result['subs']['house_disco_subs_total']}\n
+        *REGGAE*: active {result['subs']['reggae_subs_active']}, total {result['subs']['reggae_subs_total']}\n
+        *TECHNO • ELECTRO*: active {result['subs']['techno_electro_subs_active']}, total {result['subs']['techno_electro_subs_total']}\n
+        *BALEARIC • DOWNTEMPO*: active {result['subs']['balearic_and_downtempo_subs_active']}, total {result['subs']['balearic_and_downtempo_subs_total']}\n
+        *ALTERNATIVE / INDIE / FOLK / PUNK*: active {result['subs']['alternative_indie_folk_punk_subs_active']}, total {result['subs']['alternative_indie_folk_punk_subs_total']}\n
+        """
     else:
         stats = f"There is an error. API status code: {response.status_code}"
     #  response
