@@ -2,7 +2,6 @@
 #
 # -*- coding: utf-8 -*-
 
-import json
 import requests
 
 import telebot
@@ -34,7 +33,7 @@ def command_start(message):
     #  send user's data to API
     response = requests.post(f"{API_HOST}/start", json=data)
     #  introduce_text depended on API response
-    if response == 201 or 204:
+    if response.status_code in (201, 204):
         message_text = "Use */selections* to choose genres you want to follow"
     else:
         message_text = "Bot is on maintenance mode. Try again later"
@@ -66,7 +65,7 @@ def command_selections(message):
         InlineKeyboardButton("TECHNO • ELECTRO", callback_data="techno_electro"),
         InlineKeyboardButton("BALEARIC • DOWNTEMPO", callback_data="balearic_and_downtempo"),
         InlineKeyboardButton("ALTERNATIVE / INDIE / FOLK / PUNK", callback_data="alternative_indie_folk_punk"),
-        InlineKeyboardButton("unsubscribe", callback_data="unsub")
+        InlineKeyboardButton("unsubscribe", callback_data="unsubscribe")
     )
     message_text = "Tap on selections you want to follow"
     #  response
@@ -90,9 +89,8 @@ def callback_query(call):
             "selection": call.data
         }
         response = requests.put(f"{API_HOST}/subscribe", json=data)
-    result = response.json()["message"]["result"]
     #  response
-    bot.answer_callback_query(call.id, result)
+    bot.answer_callback_query(call.id, response.json()["message"]["result"])
 
 
 @bot.message_handler(commands=["unsubscribe"])
@@ -170,7 +168,11 @@ def command_stats(message):
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     #  use API method to start command execution
-    response = requests.get(f"{API_HOST}/stats?admin_chat_id={ADMIN_CHAT_ID}&telegram_api_token={BOT_TOKEN}")
+    data = {
+        "admin_chat_id": ADMIN_CHAT_ID,
+        "telegram_api_token": BOT_TOKEN
+    }
+    response = requests.post(f"{API_HOST}/stats", json=data)
     #  result depended on API response
     if response.status_code == 200:
         result = response.json()["message"]["result"]

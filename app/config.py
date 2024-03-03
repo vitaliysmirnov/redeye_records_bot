@@ -2,14 +2,14 @@
 #
 # -*- coding: utf-8 -*-
 
-from os import environ
+from os import environ, path
 
 import secrets
 
 
 ADMIN_CHAT_ID = secrets.ADMIN_CHAT_ID
 BOT_TOKEN = secrets.BOT_TOKEN
-DATABASE_URL = secrets.DATABASE_URL
+DB_PATH = f"{path.abspath(__name__).split('redeye_records_bot_v2')[0]}redeye_records_bot_v2/app/db/database.db"
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
 APP_HOST = "http://localhost:8444/"
@@ -36,29 +36,3 @@ tables = {
     "discount50": "50% SALE",
     "discount75": "75% SALE",
 }
-
-"""
-    CREATE TABLE users (
-        user_id SERIAL PRIMARY KEY,
-        user_chat_id BIGINT,
-        username VARCHAR,
-        first_name VARCHAR,
-        last_name VARCHAR,
-        is_active BOOLEAN,
-        registered_at TIMESTAMP
-);
-"""
-"""
-    CREATE TABLE subscriptions (
-        user_id INT,
-        bass_music BOOLEAN,
-        drum_and_bass BOOLEAN,
-        experimental BOOLEAN,
-        funk_hip_hop_soul BOOLEAN,
-        house_disco BOOLEAN,
-        reggae BOOLEAN,
-        techno_electro BOOLEAN,
-        balearic_and_downtempo BOOLEAN,
-        alternative_indie_folk_punk BOOLEAN
-);
-"""

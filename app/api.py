@@ -4,8 +4,7 @@
 
 from datetime import datetime, timezone
 
-import psycopg2
-import psycopg2.extras
+import sqlite3
 import telebot
 from telebot.apihelper import ApiException
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -21,6 +20,7 @@ api = api.namespace("v1")
 responses = {
     200: "OK",
     201: "Created",
+    204: "Updated",
     409: "User already exists",
     500: "Internal Server Error"
 }
@@ -75,65 +75,68 @@ class Start(Resource):
             username = request.json["username"]
             first_name = request.json["first_name"]
             last_name = request.json["last_name"]
-            db_connection = psycopg2.connect(DATABASE_URL)
+            db_connection = sqlite3.connect(DB_PATH)
             db_cursor = db_connection.cursor()
-            db_cursor.execute("SELECT user_id FROM users WHERE user_chat_id = %s", (user_chat_id,))
+            db_cursor.execute(
+                f"""
+                    SELECT user_id FROM users WHERE user_chat_id = {user_chat_id}
+                ;
+                """
+            )
             user_id = bool(db_cursor.fetchone())
             if not user_id:
                 db_cursor.execute(
-                    f"INSERT INTO users (user_chat_id, username, first_name, last_name, is_active, registered_at) "
-                    f"VALUES (%s, %s, %s, %s, true, %s);",
-                    (user_chat_id, username, first_name, last_name, datetime.now(timezone.utc),)
+                    f"""
+                        INSERT INTO users (user_id, user_chat_id, username, first_name, last_name, is_active, registered_at)
+                        VALUES ((SELECT count(user_id) FROM users) + 1, ?, ?, ?, ?, true, ?)
+                    ;
+                    """, (user_chat_id, username, first_name, last_name, str(datetime.now(timezone.utc)))
                 )
                 db_connection.commit()
                 db_cursor.execute(
-                    "INSERT INTO subscriptions VALUES "
-                    "((SELECT user_id FROM users WHERE user_chat_id = %s), "
-                    "false, false, false, false, false, false, false, false, false);", (user_chat_id,))
+                    f"""
+                        INSERT INTO subscriptions VALUES
+                        ((SELECT user_id FROM users WHERE user_chat_id = {user_chat_id}),
+                        false, false, false, false, false, false, false, false, false)
+                    ;
+                    """
+                )
                 db_connection.commit()
-                response = 201
+                status_code = 201
             else:
                 db_cursor.execute(
-                    """
+                    f"""
                         UPDATE users
-                        SET username = %s,
-                            first_name = %s,
-                            last_name = %s,
+                        SET username = ?,
+                            first_name = ?,
+                            last_name = ?,
                             is_active = true
-                        WHERE user_chat_id = %s
+                        WHERE user_chat_id = {user_chat_id}
                     ;
-                    """, (username, first_name, last_name, user_chat_id,)
+                    """, (username, first_name, last_name)
                 )
                 db_connection.commit()
                 db_cursor.execute(
-                    """
+                    f"""
                         UPDATE subscriptions
-                        SET bass_music false,
-                            drum_and_bass false,
-                            experimental false,
-                            funk_hip_hop_soul false,
-                            house_disco false,
-                            reggae false,
-                            techno_electro false,
-                            balearic_and_downtempo false,
-                            alternative_indie_folk_punk false
-                        WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                        SET bass_music = false,
+                            drum_and_bass = false,
+                            experimental = false,
+                            funk_hip_hop_soul = false,
+                            house_disco = false,
+                            reggae = false,
+                            techno_electro = false,
+                            balearic_and_downtempo = false,
+                            alternative_indie_folk_punk = false
+                        WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                     ;
                     """, (user_chat_id,)
                 )
                 db_connection.commit()
-                response = 204
+                status_code = 204
             db_connection.close()
 
-            return jsonify(
-                {
-                    "status": responses[response],
-                    "status_сode": response,
-                    "message": {
-                        "result": None
-                    }
-                }
-            )
+            return "", status_code
 
         except Exception as e:
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
@@ -162,13 +165,13 @@ class Subscribe(Resource):
         try:
             user_chat_id = request.json["user_chat_id"]
             selection = request.json["selection"]
-            db_connection = psycopg2.connect(DATABASE_URL)
+            db_connection = sqlite3.connect(DB_PATH)
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 f"""
                     UPDATE subscriptions
                     SET {selection} = true
-                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                 ;
                 """, (user_chat_id,)
             )
@@ -207,10 +210,10 @@ class Unsubscribe(Resource):
         """Unsubscribe from all threads"""
         try:
             user_chat_id = request.json["user_chat_id"]
-            db_connection = psycopg2.connect(DATABASE_URL)
+            db_connection = sqlite3.connect(DB_PATH)
             db_cursor = db_connection.cursor()
             db_cursor.execute(
-                """
+                f"""
                     UPDATE subscriptions
                     SET bass_music = false,
                         drum_and_bass = false,
@@ -221,7 +224,7 @@ class Unsubscribe(Resource):
                         techno_electro = false,
                         balearic_and_downtempo = false,
                         alternative_indie_folk_punk = false
-                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                 ;
                 """, (user_chat_id,)
             )
@@ -233,7 +236,7 @@ class Unsubscribe(Resource):
                     "status": responses[200],
                     "status_code": 200,
                     "message": {
-                        "result": "Subscriptions are deleted.\nYou can renew your subscriptions at /selections"
+                        "result": "Subscriptions are deleted. You can renew your subscriptions at /selections"
                     }
                 }
             )
@@ -259,9 +262,9 @@ class MySubscriptions(Resource):
     def get(self):
         """User's subscriptions info"""
         try:
-            user_chat_id = request.json["user_chat_id"]
-            db_connection = psycopg2.connect(DATABASE_URL)
-            db_cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            user_chat_id = request.args["user_chat_id"]
+            db_connection = sqlite3.connect(DB_PATH)
+            db_cursor = db_connection.cursor()
             db_cursor.execute(
                 """
                     SELECT bass_music,
@@ -274,22 +277,28 @@ class MySubscriptions(Resource):
                            balearic_and_downtempo,
                            alternative_indie_folk_punk
                     FROM subscriptions
-                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = %s)
+                    WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                 ;
                 """, (user_chat_id,)
             )
-            result = db_cursor.fetchone()
+            subscriptions = db_cursor.fetchone()
             db_connection.close()
 
-            result["BASS MUSIC"] = result.pop("bass_music")
-            result["DRUM & BASS • JUNGLE"] = result.pop("drum_and_bass")
-            result["AMBIENT • EXPERIMENTAL • DRONE"] = result.pop("experimental")
-            result["HIP HOP • SOUL • JAZZ • FUNK"] = result.pop("funk_hip_hop_soul")
-            result["HOUSE • DISCO"] = result.pop("house_disco")
-            result["REGGAE"] = result.pop("reggae")
-            result["TECHNO • ELECTRO"] = result.pop("techno_electro")
-            result["BALEARIC • DOWNTEMPO"] = result.pop("balearic_and_downtempo")
-            result["ALTERNATIVE / INDIE / FOLK / PUNK"] = result.pop("alternative_indie_folk_punk")
+            selections_l = list(selections.keys())
+            result_raw = dict()
+            for i in range(len(selections_l)):
+                result_raw[selections_l[i]] = subscriptions[i]
+            result = dict()
+
+            result["BASS MUSIC"] = result_raw.pop("bass_music")
+            result["DRUM & BASS • JUNGLE"] = result_raw.pop("drum_and_bass")
+            result["AMBIENT • EXPERIMENTAL • DRONE"] = result_raw.pop("experimental")
+            result["HIP HOP • SOUL • JAZZ • FUNK"] = result_raw.pop("funk_hip_hop_soul")
+            result["HOUSE • DISCO"] = result_raw.pop("house_disco")
+            result["REGGAE"] = result_raw.pop("reggae")
+            result["TECHNO • ELECTRO"] = result_raw.pop("techno_electro")
+            result["BALEARIC • DOWNTEMPO"] = result_raw.pop("balearic_and_downtempo")
+            result["ALTERNATIVE / INDIE / FOLK / PUNK"] = result_raw.pop("alternative_indie_folk_punk")
 
             return jsonify(
                 {
@@ -323,14 +332,14 @@ class Stats(Resource):
             }
         )
     )
-    def get(self):
+    def post(self):
         """Users statistics (available only for admin)"""
         try:
-            admin_chat_id = int(request.args.get("admin_chat_id"))
-            telegram_api_token = request.args.get("telegram_api_token")
+            admin_chat_id = request.json["admin_chat_id"]
+            telegram_api_token = request.json["telegram_api_token"]
             if admin_chat_id == ADMIN_CHAT_ID and telegram_api_token == BOT_TOKEN:
-                db_connection = psycopg2.connect(DATABASE_URL)
-                db_cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                db_connection = sqlite3.connect(DB_PATH)
+                db_cursor = db_connection.cursor()
                 db_cursor.execute(
                     """
                         SELECT t1.users_total, 
@@ -341,7 +350,12 @@ class Stats(Resource):
                     ;
                     """
                 )
-                result_users = db_cursor.fetchall()[0]
+                users = db_cursor.fetchall()[0]
+                result_users = {
+                    "users_total": users[0],
+                    "users_active": users[1]
+                }
+
                 db_cursor.execute(
                     """
                         SELECT t1.bass_music_subs_active, 
@@ -393,8 +407,15 @@ class Stats(Resource):
                     ;
                     """
                 )
-                result_subs = db_cursor.fetchone()
+                subs = db_cursor.fetchone()
                 db_connection.close()
+
+                selections_l = list(selections.keys())
+                result_subs = dict()
+                for i in range(len(selections_l)):
+                    result_subs[f"{selections_l[i]}_subs_active"] = subs[i]
+                for i in range(len(selections_l)):
+                    result_subs[f"{selections_l[i]}_subs_total"] = subs[len(selections_l) + i]
 
                 return jsonify(
                     {
@@ -430,22 +451,29 @@ class NewRelease(Resource):
             }
         )
     )
-    def get(self):
+    def post(self):
         """API waits for new release notification from parser"""
         try:
-            redeye_id = int(request.args.get("redeye_id"))
-            table = request.args.get("table")
+            redeye_id = request.json["redeye_id"]
+            table = request.json["table"]
 
-            db_connection = psycopg2.connect(DATABASE_URL)
+            db_connection = sqlite3.connect(DB_PATH)
             db_cursor = db_connection.cursor()
-            db_cursor.execute(f"SELECT item, samples, selection FROM {table} WHERE redeye_id = %s", (redeye_id,))
+            db_cursor.execute(
+                f"""
+                    SELECT item, samples, selection FROM {table} WHERE redeye_id = ?"
+                """, (redeye_id,)
+            )
             item, samples, selection = db_cursor.fetchone()
 
             db_cursor.execute(
-                f"SELECT users.user_chat_id "
-                f"FROM users "
-                f"JOIN subscriptions ON subscriptions.user_id = users.user_id "
-                f"WHERE subscriptions.{selection} = true AND users.is_active = true;"
+                f"""
+                    SELECT users.user_chat_id
+                    FROM users
+                    JOIN subscriptions ON subscriptions.user_id = users.user_id
+                    WHERE subscriptions.{selection} = true AND users.is_active = true
+                ;
+                """
             )
             users = [user_chat_id[0] for user_chat_id in db_cursor.fetchall()]
 
@@ -482,18 +510,18 @@ class NewRelease(Resource):
                     else:
                         pass
 
-                for user in users:
+                for user_chat_id in users:
                     try:
-                        bot.send_message(user, item, reply_markup=reply_markup, parse_mode="Markdown")
+                        bot.send_message(user_chat_id, item, reply_markup=reply_markup, parse_mode="Markdown")
                     except ApiException as e:
                         if "bot was blocked by the user" in e.args[0]:
                             db_cursor.execute(
                                 """
                                     UPDATE users
                                     SET is_active = false
-                                    WHERE user_chat_id = %s
+                                    WHERE user_chat_id = ?
                                 ;
-                                """, (user,)
+                                """, (user_chat_id,)
                             )
                             db_connection.commit()
 
