@@ -539,7 +539,3 @@ class NewRelease(Resource):
 
         except Exception as e:
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
-
-
-if __name__ == "__main__":
-    app.run(host=HOST, port=PORT)

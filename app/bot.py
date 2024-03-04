@@ -195,7 +195,5 @@ def command_stats(message):
 
 
 if __name__ == "__main__":
-    bot.polling(non_stop=True)
-
-    # bot.remove_webhook()
-    # bot.set_webhook(url=APP_HOST + API_TOKEN)
+    bot.remove_webhook()
+    bot.set_webhook(url=APP_HOST + BOT_TOKEN)
