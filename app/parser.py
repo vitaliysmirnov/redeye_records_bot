@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-from app.config import *
+from config import *
 
 
 class Parser:

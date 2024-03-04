@@ -7,7 +7,7 @@ import requests
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 
-from app.config import *
+from config import *
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
