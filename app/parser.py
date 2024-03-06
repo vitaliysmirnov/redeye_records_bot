@@ -102,17 +102,13 @@ class Parser:
         price = release.find("div", attrs={"class": "price"}).text.replace("!", "!\n")
         img = release.find("img")["src"]
         release_url = release.find("a")["href"]
-        item = (
-            f"""
-                *{selections[selection]}*\n
-                {section}\n\n
-                *{title}*\n
-                _{label}_\n\n
-                {tracklist}\n
-                {price}
-                {release_url}
-            """
-        )
+        item = (f"*{selections[selection]}*\n"
+                f"{section}\n\n"
+                f"*{title}*\n"
+                f"_{label}_\n\n"
+                f"{tracklist}\n"
+                f"{price}"
+                f"{release_url}")
 
         return int(redeye_id), item, samples, img
 
@@ -189,7 +185,7 @@ class Parser:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.WARNING, filename="redeye_records_parser.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(level=logging.DEBUG, filename="redeye_records_parser.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
 
     p = Parser()
     try:
