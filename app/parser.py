@@ -129,7 +129,7 @@ class Parser:
                     db_cursor.execute(
                         f"""
                             INSERT INTO {table} (item_id, redeye_id, item, samples, img, selection, registered_at)
-                            VALUES ((SELECT count(item_id) FROM {table}) + 1, ?, ?, ?, ?, ?, ?)
+                            VALUES ((SELECT max(item_id) FROM {table}) + 1, ?, ?, ?, ?, ?, ?)
                         ;
                         """, (redeye_id, item, samples, img, selection, str(datetime.now(timezone.utc)))
                     )
@@ -166,7 +166,7 @@ class Parser:
                         db_cursor.execute(
                             f"""
                                 INSERT INTO {table} (item_id, redeye_id, item, samples, img, selection, registered_at)
-                                VALUES ((SELECT count(item_id) FROM {table}) + 1, ?, ?, ?, ?, ?, ?)
+                                VALUES ((SELECT max(item_id) FROM {table}) + 1, ?, ?, ?, ?, ?, ?)
                             ;
                             """, (redeye_id, item, samples, img, selection, str(datetime.now(timezone.utc)))
                         )
