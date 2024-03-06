@@ -149,7 +149,7 @@ class Parser:
 
                 db_cursor.execute(f"SELECT redeye_id FROM {table}")
                 db_redeye_ids = db_cursor.fetchall()
-                logging.info(f"Redeye IDs in {table}: {db_redeye_ids}")
+                logging.debug(f"Redeye IDs in {table}: {db_redeye_ids}")
 
                 releases = self.get_data_from_url(url)
                 for release in releases:
@@ -157,21 +157,24 @@ class Parser:
                     if (redeye_id,) not in db_redeye_ids:
                         db_cursor.execute(
                             f"""
-                                DELETE FROM {table} WHERE item_id = (SELECT MIN(item_id) FROM {table})
-                            ;
-                            """
-                        )
-                        db_connection.commit()
-                        logging.info(f"The oldest release in {table} was deleted from DB to cleanup space")
-                        db_cursor.execute(
-                            f"""
                                 INSERT INTO {table} (item_id, redeye_id, item, samples, img, selection, registered_at)
-                                VALUES ((SELECT max(item_id) FROM {table}) + 1, ?, ?, ?, ?, ?, ?)
+                                VALUES ((CASE WHEN (SELECT count(item_id) FROM {table}) == 0 THEN 1 ELSE (SELECT max(item_id) FROM {table}) + 1 END), ?, ?, ?, ?, ?, ?)
                             ;
                             """, (redeye_id, item, samples, img, selection, str(datetime.now(timezone.utc)))
                         )
                         db_connection.commit()
                         logging.info(f"New release added to DB. Redeye ID: {redeye_id}")
+                        db_cursor.execute(f"SELECT count(item_id) FROM {table}")
+                        count_item_id = db_cursor.fetchone()
+                        if count_item_id > (50,):
+                            db_cursor.execute(
+                                f"""
+                                    DELETE FROM {table} WHERE item_id = (SELECT min(item_id) FROM {table})
+                                ;
+                                """
+                            )
+                            db_connection.commit()
+                            logging.debug(f"The oldest release in {table} was deleted from DB to cleanup space")
 
                         data = {
                             "redeye_id": redeye_id,
