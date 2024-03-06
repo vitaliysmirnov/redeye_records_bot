@@ -138,7 +138,6 @@ class Parser:
                         """, (redeye_id, item, samples, img, selection, str(datetime.now(timezone.utc)))
                     )
                     db_connection.commit()
-                    logging.debug("Data committed to DB")
 
         db_connection.close()
 
