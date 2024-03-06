@@ -1,0 +1,14 @@
+# /etc/systemd/system/redeye_records_bot_api.service
+[Unit]
+Description=uWSGI instance to serve redeye_records_bot
+After=network.target
+
+[Service]
+User=bot
+Group=www-data
+WorkingDirectory=/home/bot/redeye_records_bot_v2
+Environment="PATH=/home/bot/redeye_records_bot_v2/.venv/bin"
+ExecStart=/home/bot/redeye_records_bot_v2/.venv/bin/uwsgi --ini redeye_records_bot_api.ini
+
+[Install]
+WantedBy=multi-user.target

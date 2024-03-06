@@ -1,0 +1,14 @@
+# /etc/systemd/system/redeye_records_bot_parser.service
+[Unit]
+Description=An instance to serve redeye_records_parser
+After=multi-user.target
+
+[Service]
+User=bot
+Group=www-data
+WorkingDirectory=/home/bot/redeye_records_bot_v2
+Environment="PATH=/home/bot/redeye_records_bot_v2/.venv/bin"
+ExecStart=/home/bot/redeye_records_bot_v2/.venv/bin/python /home/bot/redeye_records_bot_v2/app/parser.py
+
+[Install]
+WantedBy=multi-user.target
