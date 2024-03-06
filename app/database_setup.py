@@ -5,7 +5,7 @@
 import sqlite3
 from os import path
 
-from config import DB_PATH
+from app.config import DB_PATH
 
 
 def main():

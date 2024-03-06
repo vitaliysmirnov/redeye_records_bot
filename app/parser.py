@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-from config import *
+from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, selections, tables
 
 
 class Parser:
@@ -190,7 +190,7 @@ class Parser:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, filename="redeye_records_parser.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(level=logging.WARNING, filename="redeye_records_parser.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
 
     p = Parser()
     try:

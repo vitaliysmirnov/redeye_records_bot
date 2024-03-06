@@ -2,8 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 
-from app.api import app
-from app.config import HOST
+from app.bot import app
 
 if __name__ == "__main__":
-    app.run(host=HOST)
+    app.run()

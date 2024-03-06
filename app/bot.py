@@ -6,11 +6,28 @@ import requests
 
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
+from flask import Flask, request, render_template
 
-from config import *
+from app.api import blueprint
+from app.config import BOT_TOKEN, API_HOST, ADMIN_CHAT_ID, APP_HOST
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+app = Flask(__name__)
+app.register_blueprint(blueprint)
+
+
+@app.route("/")
+def index():
+    """index page"""
+    return render_template("index.html")
+
+
+@app.route("/" + BOT_TOKEN, methods=["POST"])
+def get_message():
+    """Webhook routing: new messages processor"""
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "!", 200
 
 
 @bot.message_handler(commands=["start"])
@@ -33,7 +50,7 @@ def command_start(message):
     #  send user's data to API
     response = requests.post(f"{API_HOST}/start", json=data)
     #  introduce_text depended on API response
-    if response.status_code in (201, 204):
+    if response.status_code in (200, 201):
         message_text = "Use */selections* to choose genres you want to follow"
     else:
         message_text = "Bot is on maintenance mode. Try again later"

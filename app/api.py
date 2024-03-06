@@ -4,16 +4,17 @@
 
 from datetime import datetime, timezone
 
-import sqlite3
 import telebot
+import sqlite3
 from telebot.apihelper import ApiException
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from flask import Flask, request, jsonify, render_template, Blueprint
+from flask import request, jsonify, Blueprint
 from flask_restx import Api, Resource, fields
 
-from app.config import *
+from app.config import BOT_TOKEN, DB_PATH, ADMIN_CHAT_ID, selections
 
 
+bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 blueprint = Blueprint("api", __name__, url_prefix="/api")
 api = Api(app=blueprint, version="1", title="Redeye Records Bot API")
 api = api.namespace("v1")
@@ -21,31 +22,18 @@ responses = {
     200: "OK",
     201: "Created",
     204: "Updated",
-    409: "User already exists",
     500: "Internal Server Error"
 }
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
-app = Flask(__name__)
-app.register_blueprint(blueprint)
-
-
-@app.route("/")
-def index():
-    """index page"""
-    return render_template("index.html")
-
-
-@app.route("/" + BOT_TOKEN, methods=["POST"])
-def get_message():
-    """Webhook routing: new messages processor"""
-    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-    return "!", 200
 
 
 @api.route("/start")
 class Start(Resource):
     @api.doc(
-        responses=responses,
+        responses={
+            200: "OK",
+            201: "Created",
+            500: "Internal Server Error"
+        },
         body=api.model(
             "Register new user",
             {
@@ -103,6 +91,7 @@ class Start(Resource):
                 )
                 db_connection.commit()
                 status_code = 201
+                additional_info = ""
             else:
                 db_cursor.execute(
                     f"""
@@ -133,10 +122,11 @@ class Start(Resource):
                     """, (user_chat_id,)
                 )
                 db_connection.commit()
-                status_code = 204
+                status_code = 200
+                additional_info = f". User {user_chat_id} already exists. All subscriptions removed"
             db_connection.close()
 
-            return "", status_code
+            return responses[status_code] + additional_info, status_code
 
         except Exception as e:
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
@@ -461,7 +451,8 @@ class NewRelease(Resource):
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 f"""
-                    SELECT item, samples, selection FROM {table} WHERE redeye_id = ?"
+                    SELECT item, samples, selection FROM {table} WHERE redeye_id = ?
+                ;
                 """, (redeye_id,)
             )
             item, samples, selection = db_cursor.fetchone()

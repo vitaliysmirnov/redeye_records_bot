@@ -2,21 +2,20 @@
 #
 # -*- coding: utf-8 -*-
 
-from os import environ, path
+import os
 
-import secrets
+from dotenv import load_dotenv
 
 
-ADMIN_CHAT_ID = secrets.ADMIN_CHAT_ID
-BOT_TOKEN = secrets.BOT_TOKEN
-DB_PATH = f"{path.abspath(__name__).split('redeye_records_bot_v2')[0]}redeye_records_bot_v2/app/db/database.db"
+load_dotenv()
+
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+DB_PATH = f"{os.path.abspath(__name__).split('redeye_records_bot_v2')[0]}redeye_records_bot_v2/app/db/database.db"
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
-APP_HOST = "http://localhost:8444/"
+APP_HOST = "https://redeyerecordsbot.ru/"
 API_HOST = APP_HOST + "api/v1"
-
-HOST = "0.0.0.0"
-PORT = int(environ.get("PORT", 8444))
 
 selections = {
     "bass_music": "BASS MUSIC",
