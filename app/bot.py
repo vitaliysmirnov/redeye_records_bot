@@ -9,7 +9,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardBu
 from flask import Flask, request, render_template
 
 from app.api import blueprint
-from app.config import BOT_TOKEN, API_HOST, ADMIN_CHAT_ID, APP_HOST
+from app.config import BOT_TOKEN, API_HOST, APP_HOST
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
@@ -41,14 +41,14 @@ def command_start(message):
     username = message.from_user.username
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
+    #  send user's data to API
     data = {
         "user_chat_id": user_chat_id,
         "username": username,
         "first_name": first_name,
         "last_name": last_name
     }
-    #  send user's data to API
-    response = requests.post(f"{API_HOST}/start", json=data)
+    response = requests.put(f"{API_HOST}/start", json=data)
     #  introduce_text depended on API response
     if response.status_code in (200, 201):
         message_text = "Use */selections* to choose genres you want to follow"
@@ -107,7 +107,7 @@ def callback_query(call):
         }
         response = requests.put(f"{API_HOST}/subscribe", json=data)
     #  response
-    bot.answer_callback_query(call.id, response.json()["message"]["result"])
+    bot.answer_callback_query(call.id, response.json())
 
 
 @bot.message_handler(commands=["unsubscribe"])
@@ -117,8 +117,10 @@ def command_unsubscribe(message):
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     #  use API method to start command execution
-    response = requests.put(f"{API_HOST}/unsubscribe?user_chat_id={user_chat_id}")
-    result = response.json()["message"]["result"]
+    data = {
+        "user_chat_id": user_chat_id
+    }
+    requests.put(f"{API_HOST}/unsubscribe", json=data)
     #  menu buttons
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(
@@ -126,21 +128,7 @@ def command_unsubscribe(message):
         KeyboardButton("/selections"),
     )
     #  response
-    bot.send_message(user_chat_id, result.replace("/selections", "*/selections*"), reply_markup=keyboard, parse_mode="Markdown")
-
-
-@bot.message_handler(commands=["help"])
-def command_help(message):
-    """/help command handler"""
-    #  get user_chat_id from message to identify user
-    user_chat_id = message.chat.id
-    #  text
-    help_text = "*redeyerecords.co.uk* - dance music specialists since 1992\n\n\n" \
-                "*/selections* to choose selections\n\n" \
-                "*/my_subscriptions* to get your subscriptions\n\n" \
-                "*/unsubscribe* to unsubscribe\n\n"
-    #  response
-    bot.send_message(user_chat_id, help_text, parse_mode="Markdown", disable_notification=True)
+    bot.send_message(user_chat_id, "You can renew your subscriptions at */selections*", reply_markup=keyboard, parse_mode="Markdown")
 
 
 @bot.message_handler(commands=["my_subscriptions"])
@@ -185,30 +173,22 @@ def command_stats(message):
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     #  use API method to start command execution
-    data = {
-        "admin_chat_id": ADMIN_CHAT_ID,
-        "telegram_api_token": BOT_TOKEN
-    }
-    response = requests.post(f"{API_HOST}/stats", json=data)
-    #  result depended on API response
-    if response.status_code == 200:
-        result = response.json()["message"]["result"]
-        stats = f"""
-        *USERS*: active {result['users']['users_active']}, total {result['users']['users_total']}\n\n
-        *BASS MUSIC*: active {result['subs']['bass_music_subs_active']}, total {result['subs']['bass_music_subs_total']}\n
-        *DRUM & BASS • JUNGLE*: active {result['subs']['drum_and_bass_subs_active']}, total {result['subs']['drum_and_bass_subs_total']}\n
-        *AMBIENT • EXPERIMENTAL • DRONE*: active {result['subs']['experimental_subs_active']}, total {result['subs']['experimental_subs_total']}\n
-        *HIP HOP • SOUL • JAZZ • FUNK*: active {result['subs']['funk_hip_hop_soul_subs_active']}, total {result['subs']['funk_hip_hop_soul_subs_total']}\n
-        *HOUSE • DISCO*: active {result['subs']['house_disco_subs_active']}, total {result['subs']['house_disco_subs_total']}\n
-        *REGGAE*: active {result['subs']['reggae_subs_active']}, total {result['subs']['reggae_subs_total']}\n
-        *TECHNO • ELECTRO*: active {result['subs']['techno_electro_subs_active']}, total {result['subs']['techno_electro_subs_total']}\n
-        *BALEARIC • DOWNTEMPO*: active {result['subs']['balearic_and_downtempo_subs_active']}, total {result['subs']['balearic_and_downtempo_subs_total']}\n
-        *ALTERNATIVE / INDIE / FOLK / PUNK*: active {result['subs']['alternative_indie_folk_punk_subs_active']}, total {result['subs']['alternative_indie_folk_punk_subs_total']}\n
-        """
-    else:
-        stats = f"There is an error. API status code: {response.status_code}"
+    response = requests.get(f"{API_HOST}/stats?telegram_api_token={BOT_TOKEN}")
+    stats = response.json()
     #  response
     bot.send_message(user_chat_id, stats, parse_mode="Markdown")
+
+
+@bot.message_handler(commands=["help"])
+def command_help(message):
+    """/help command handler"""
+    #  get user_chat_id from message to identify user
+    user_chat_id = message.chat.id
+    #  text
+    response = requests.get(f"{API_HOST}/help")
+    help_text = response.json()
+    #  response
+    bot.send_message(user_chat_id, help_text, parse_mode="Markdown", disable_notification=True)
 
 
 if __name__ == "__main__":
