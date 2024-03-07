@@ -8,8 +8,8 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from flask import Flask, request, render_template
 
+from config import BOT_TOKEN, API_HOST, APP_HOST
 from app.api import blueprint
-from app.config import BOT_TOKEN, API_HOST, APP_HOST
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)

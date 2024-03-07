@@ -12,7 +12,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from flask import request, jsonify, Blueprint
 from flask_restx import Api, Resource, fields
 
-from app.config import BOT_TOKEN, DB_PATH, ADMIN_CHAT_ID, selections
+from config import BOT_TOKEN, DB_PATH, selections
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)

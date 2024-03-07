@@ -7,11 +7,13 @@ import os
 from dotenv import load_dotenv
 
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 load_dotenv()
 
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-DB_PATH = "/home/bot/redeye_records_bot_v2/app/db/database.db"
+DB_PATH = os.path.join(basedir, "app", "db", "database.db")
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
 APP_HOST = "https://redeyerecordsbot.ru/"

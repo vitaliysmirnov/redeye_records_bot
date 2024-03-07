@@ -185,16 +185,3 @@ class Parser:
                             logging.warning(f"Can't reach API! Status code: {request.status_code}")
 
         db_connection.close()
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG, filename="redeye_records_parser.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
-
-    p = Parser()
-    try:
-        p.db_initiation()
-        while True:
-            sleep(600)
-            p.check_new_releases()
-    except Exception as e:
-        logging.critical(e)
