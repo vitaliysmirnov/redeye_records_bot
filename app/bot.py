@@ -131,7 +131,6 @@ def command_unsubscribe(message):
 @bot.message_handler(commands=["my_subscriptions"])
 def command_my_subscriptions(message):
     """/my_subscriptions command handler"""
-    bot.send_message(message.from_user.id, "Give me a second...")
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     response = requests.get(f"{API_HOST}/my_subscriptions?user_chat_id={user_chat_id}", headers=api_key_headers)
@@ -140,8 +139,7 @@ def command_my_subscriptions(message):
     #  result depended on API response
     my_subscriptions = list()
     if response.status_code == 200:
-        result = response.json()["message"]["result"]
-        for key, value in result.items():
+        for key, value in response.json().items():
             if value:
                 my_subscriptions.append(f"*{key}*")
         #  info message depended on user's subscriptions

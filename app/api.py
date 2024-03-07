@@ -10,7 +10,7 @@ import telebot
 import sqlite3
 from telebot.apihelper import ApiException
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from flask import request, jsonify, Blueprint
+from flask import request, Blueprint
 from flask_restx import Api, Resource, fields
 
 from config import BOT_TOKEN, API_KEY, DB_PATH, selections
@@ -339,15 +339,7 @@ class MySubscriptions(Resource):
             result["BALEARIC • DOWNTEMPO"] = result_raw.pop("balearic_and_downtempo")
             result["ALTERNATIVE / INDIE / FOLK / PUNK"] = result_raw.pop("alternative_indie_folk_punk")
 
-            return jsonify(
-                {
-                    "status": responses[200],
-                    "status_code": 200,
-                    "message": {
-                        "result": result
-                    }
-                }
-            )
+            return result, 200
 
         except Exception as e:
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
