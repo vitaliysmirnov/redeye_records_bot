@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, selections, tables
+from config import API_HOST, API_KEY, DB_PATH, REDEYE_URL, REDEYE_CDN, api_key_headers, selections, tables
 
 
 class Parser:
@@ -180,7 +180,7 @@ class Parser:
                             "redeye_id": redeye_id,
                             "table": table
                         }
-                        request = requests.post(f"{API_HOST}/new_release", json=data)
+                        request = requests.post(f"{API_HOST}/new_release", json=data, headers=api_key_headers)
                         if request.status_code != 200:
                             logging.warning(f"Can't reach API! Status code: {request.status_code}")
 

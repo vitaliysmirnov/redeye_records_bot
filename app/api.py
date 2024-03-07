@@ -3,6 +3,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from functools import wraps
 from datetime import datetime, timezone
 
 import telebot
@@ -12,7 +13,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from flask import request, jsonify, Blueprint
 from flask_restx import Api, Resource, fields
 
-from config import BOT_TOKEN, DB_PATH, selections
+from config import BOT_TOKEN, API_KEY, DB_PATH, selections
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
@@ -22,8 +23,19 @@ api = api.namespace("v1")
 responses = {
     200: "OK",
     201: "Created",
+    401: "Unauthorized",
     500: "Internal Server Error"
 }
+
+
+def require_api_key(view_function):
+    @wraps(view_function)
+    def decorated_route(*args, **kwargs):
+        if request.headers.get("x-api-key") and request.headers.get("x-api-key") == API_KEY:
+            return view_function(*args, **kwargs)
+        else:
+            api.abort(401)
+    return decorated_route
 
 
 @api.route("/start")
@@ -32,6 +44,7 @@ class Start(Resource):
         responses={
             200: "OK",
             201: "Created",
+            401: "Unauthorized",
             500: "Internal Server Error"
         },
         body=api.model(
@@ -54,8 +67,17 @@ class Start(Resource):
                     required=False
                 )
             }
-        )
+        ),
+        params={
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
+                "type": "string",
+                "required": "true"
+            }
+        }
     )
+    @require_api_key
     def put(self):
         """Register new user"""
         try:
@@ -140,6 +162,7 @@ class Subscribe(Resource):
     @api.doc(
         responses={
             200: "OK",
+            401: "Unauthorized",
             500: "Internal Server Error"
         },
         body=api.model(
@@ -154,8 +177,17 @@ class Subscribe(Resource):
                     required=True
                 )
             }
-        )
+        ),
+        params={
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
+                "type": "string",
+                "required": "true"
+            }
+        }
     )
+    @require_api_key
     def put(self):
         """Set up user's subscriptions"""
         try:
@@ -187,6 +219,7 @@ class Unsubscribe(Resource):
     @api.doc(
         responses={
             200: "OK",
+            401: "Unauthorized",
             500: "Internal Server Error"
         },
         body=api.model(
@@ -197,8 +230,17 @@ class Unsubscribe(Resource):
                     required=True
                 )
             }
-        )
+        ),
+        params={
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
+                "type": "string",
+                "required": "true"
+            }
+        }
     )
+    @require_api_key
     def put(self):
         """Unsubscribe from all threads"""
         try:
@@ -237,6 +279,7 @@ class MySubscriptions(Resource):
     @api.doc(
         responses={
             200: "OK",
+            401: "Unauthorized",
             500: "Internal Server Error"
         },
         params={
@@ -245,9 +288,16 @@ class MySubscriptions(Resource):
                 "description": "User's Telegram chat ID",
                 "type": "integer",
                 "required": "true"
+            },
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
+                "type": "string",
+                "required": "true"
             }
         }
     )
+    @require_api_key
     def get(self):
         """User's subscriptions info"""
         try:
@@ -308,6 +358,7 @@ class NewRelease(Resource):
     @api.doc(
         responses={
             200: "OK",
+            401: "Unauthorized",
             500: "Internal Server Error"
         },
         body=api.model(
@@ -322,8 +373,17 @@ class NewRelease(Resource):
                     required=True
                 )
             }
-        )
+        ),
+        params={
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
+                "type": "string",
+                "required": "true"
+            }
+        }
     )
+    @require_api_key
     def post(self):
         """API waits for new release notification from parser"""
         try:
@@ -417,94 +477,93 @@ class Stats(Resource):
     @api.doc(
         responses={
             200: "OK",
+            401: "Unauthorized",
             500: "Internal Server Error"
         },
         params={
-            "telegram_api_token": {
-                "in": "query",
-                "description": "Telegram Bot API Token",
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
                 "type": "string",
                 "required": "true"
             }
         }
     )
+    @require_api_key
     def get(self):
         """Users statistics"""
         try:
-            telegram_api_token = request.args["telegram_api_token"]
-            if telegram_api_token == BOT_TOKEN:
-                db_connection = sqlite3.connect(DB_PATH)
-                db_cursor = db_connection.cursor()
-                db_cursor.execute(
-                    """
-                        SELECT t1.users_active, 
-                               t2.users_total
-                        FROM
-                        (SELECT count(is_active) AS users_active FROM users WHERE is_active = true) AS t1,
-                        (SELECT count(user_id) AS users_total FROM users) AS t2
-                    ;
-                    """
-                )
-                users = db_cursor.fetchone()
-                db_cursor.execute(
-                    """
-                        SELECT t1.bass_music_subs_active, 
-                               t2.drum_and_bass_subs_active, 
-                               t3.experimental_subs_active, 
-                               t4.funk_hip_hop_soul_subs_active, 
-                               t5.house_disco_subs_active, 
-                               t6.reggae_subs_active,
-                               t7.techno_electro_subs_active,
-                               t8.balearic_and_downtempo_subs_active,
-                               t9.alternative_indie_folk_punk_subs_active,
-                               t10.bass_music_subs_total, 
-                               t11.drum_and_bass_subs_total, 
-                               t12.experimental_subs_total, 
-                               t13.funk_hip_hop_soul_subs_total, 
-                               t14.house_disco_subs_total, 
-                               t15.reggae_subs_total, 
-                               t16.techno_electro_subs_total, 
-                               t17.balearic_and_downtempo_subs_total, 
-                               t18.alternative_indie_folk_punk_subs_total
-                        FROM
-                        (SELECT count(u.user_id) AS bass_music_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND bass_music = true) AS t1,
-                        (SELECT count(u.user_id) AS drum_and_bass_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND drum_and_bass = true) AS t2,
-                        (SELECT count(u.user_id) AS experimental_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND experimental = true) AS t3,
-                        (SELECT count(u.user_id) AS funk_hip_hop_soul_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND funk_hip_hop_soul = true) AS t4,
-                        (SELECT count(u.user_id) AS house_disco_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND house_disco = true) AS t5,
-                        (SELECT count(u.user_id) AS reggae_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND reggae = true) AS t6,
-                        (SELECT count(u.user_id) AS techno_electro_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND techno_electro = true) AS t7,
-                        (SELECT count(u.user_id) AS balearic_and_downtempo_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND balearic_and_downtempo = true) AS t8,
-                        (SELECT count(u.user_id) AS alternative_indie_folk_punk_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                            WHERE u.is_active = true AND alternative_indie_folk_punk = true) AS t9,
-                        (SELECT count(*) AS bass_music_subs_total FROM subscriptions WHERE bass_music = true) AS t10,
-                        (SELECT count(*) AS drum_and_bass_subs_total FROM subscriptions WHERE drum_and_bass = true) AS t11,
-                        (SELECT count(*) AS experimental_subs_total FROM subscriptions WHERE experimental = true) AS t12,
-                        (SELECT count(*) AS funk_hip_hop_soul_subs_total FROM subscriptions WHERE funk_hip_hop_soul = true) AS t13,
-                        (SELECT count(*) AS house_disco_subs_total FROM subscriptions WHERE house_disco = true) AS t14,
-                        (SELECT count(*) AS reggae_subs_total FROM subscriptions WHERE reggae = true) AS t15,
-                        (SELECT count(*) AS techno_electro_subs_total FROM subscriptions WHERE techno_electro = true) AS t16,
-                        (SELECT count(*) AS balearic_and_downtempo_subs_total FROM subscriptions WHERE balearic_and_downtempo = true) AS t17,
-                        (SELECT count(*) AS alternative_indie_folk_punk_subs_total FROM subscriptions WHERE alternative_indie_folk_punk = true) AS t18
-                    ;
-                    """
-                )
-                subs = db_cursor.fetchone()
-                db_connection.close()
+            db_connection = sqlite3.connect(DB_PATH)
+            db_cursor = db_connection.cursor()
+            db_cursor.execute(
+                """
+                    SELECT t1.users_active, 
+                           t2.users_total
+                    FROM
+                    (SELECT count(is_active) AS users_active FROM users WHERE is_active = true) AS t1,
+                    (SELECT count(user_id) AS users_total FROM users) AS t2
+                ;
+                """
+            )
+            users = db_cursor.fetchone()
+            db_cursor.execute(
+                """
+                    SELECT t1.bass_music_subs_active, 
+                           t2.drum_and_bass_subs_active, 
+                           t3.experimental_subs_active, 
+                           t4.funk_hip_hop_soul_subs_active, 
+                           t5.house_disco_subs_active, 
+                           t6.reggae_subs_active,
+                           t7.techno_electro_subs_active,
+                           t8.balearic_and_downtempo_subs_active,
+                           t9.alternative_indie_folk_punk_subs_active,
+                           t10.bass_music_subs_total, 
+                           t11.drum_and_bass_subs_total, 
+                           t12.experimental_subs_total, 
+                           t13.funk_hip_hop_soul_subs_total, 
+                           t14.house_disco_subs_total, 
+                           t15.reggae_subs_total, 
+                           t16.techno_electro_subs_total, 
+                           t17.balearic_and_downtempo_subs_total, 
+                           t18.alternative_indie_folk_punk_subs_total
+                    FROM
+                    (SELECT count(u.user_id) AS bass_music_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND bass_music = true) AS t1,
+                    (SELECT count(u.user_id) AS drum_and_bass_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND drum_and_bass = true) AS t2,
+                    (SELECT count(u.user_id) AS experimental_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND experimental = true) AS t3,
+                    (SELECT count(u.user_id) AS funk_hip_hop_soul_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND funk_hip_hop_soul = true) AS t4,
+                    (SELECT count(u.user_id) AS house_disco_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND house_disco = true) AS t5,
+                    (SELECT count(u.user_id) AS reggae_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND reggae = true) AS t6,
+                    (SELECT count(u.user_id) AS techno_electro_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND techno_electro = true) AS t7,
+                    (SELECT count(u.user_id) AS balearic_and_downtempo_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND balearic_and_downtempo = true) AS t8,
+                    (SELECT count(u.user_id) AS alternative_indie_folk_punk_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
+                        WHERE u.is_active = true AND alternative_indie_folk_punk = true) AS t9,
+                    (SELECT count(*) AS bass_music_subs_total FROM subscriptions WHERE bass_music = true) AS t10,
+                    (SELECT count(*) AS drum_and_bass_subs_total FROM subscriptions WHERE drum_and_bass = true) AS t11,
+                    (SELECT count(*) AS experimental_subs_total FROM subscriptions WHERE experimental = true) AS t12,
+                    (SELECT count(*) AS funk_hip_hop_soul_subs_total FROM subscriptions WHERE funk_hip_hop_soul = true) AS t13,
+                    (SELECT count(*) AS house_disco_subs_total FROM subscriptions WHERE house_disco = true) AS t14,
+                    (SELECT count(*) AS reggae_subs_total FROM subscriptions WHERE reggae = true) AS t15,
+                    (SELECT count(*) AS techno_electro_subs_total FROM subscriptions WHERE techno_electro = true) AS t16,
+                    (SELECT count(*) AS balearic_and_downtempo_subs_total FROM subscriptions WHERE balearic_and_downtempo = true) AS t17,
+                    (SELECT count(*) AS alternative_indie_folk_punk_subs_total FROM subscriptions WHERE alternative_indie_folk_punk = true) AS t18
+                ;
+                """
+            )
+            subs = db_cursor.fetchone()
+            db_connection.close()
+            stats = f"*users*: active {users[0]}, total {users[1]}\n"
+            for i in range(int(len(subs) / 2)):
+                stats += f"\n*{list(selections.keys())[i]}*: active {subs[i]}, total {subs[int(len(subs) / 2) + i]}"
 
-                stats = f"*users*: active {users[0]}, total {users[1]}\n"
-                for i in range(int(len(subs) / 2)):
-                    stats += f"\n*{list(selections.keys())[i]}*: active {subs[i]}, total {subs[int(len(subs) / 2) + i]}"
-
-                return stats, 200
+            return stats, 200
 
         except Exception as e:
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
@@ -515,9 +574,19 @@ class Help(Resource):
     @api.doc(
         responses={
             200: "OK",
+            401: "Unauthorized",
             500: "Internal Server Error"
+        },
+        params={
+            "x-api-key": {
+                "in": "header",
+                "description": "API key",
+                "type": "string",
+                "required": "true"
+            }
         }
     )
+    @require_api_key
     def get(self):
         """A list of available actions"""
         help_text = "*redeyerecords.co.uk* - dance music specialists since 1992\n\n\n" \

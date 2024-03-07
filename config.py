@@ -11,13 +11,15 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 load_dotenv()
 
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+API_KEY = os.getenv("API_KEY")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_PATH = os.path.join(basedir, "app", "db", "database.db")
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
 APP_HOST = "https://redeyerecordsbot.ru/"
 API_HOST = APP_HOST + "api/v1"
+
+api_key_headers = {"x-api-key": API_KEY}
 
 selections = {
     "bass_music": "BASS MUSIC",

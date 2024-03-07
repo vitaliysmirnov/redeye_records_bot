@@ -8,7 +8,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from flask import Flask, request, render_template
 
-from config import BOT_TOKEN, API_HOST, APP_HOST
+from config import BOT_TOKEN, API_HOST, APP_HOST, api_key_headers
 from app.api import blueprint
 
 
@@ -48,7 +48,7 @@ def command_start(message):
         "first_name": first_name,
         "last_name": last_name
     }
-    response = requests.put(f"{API_HOST}/start", json=data)
+    response = requests.put(f"{API_HOST}/start", json=data, headers=api_key_headers)
     #  introduce_text depended on API response
     if response.status_code in (200, 201):
         message_text = "Use */selections* to choose genres you want to follow"
@@ -95,17 +95,14 @@ def callback_query(call):
     #  get user_chat_id from message to identify user
     user_chat_id = call.from_user.id
     #  result depended on clicked button
+    data = {
+        "user_chat_id": user_chat_id
+    }
     if call.data == "unsubscribe":
-        data = {
-            "user_chat_id": user_chat_id
-        }
-        response = requests.put(f"{API_HOST}/unsubscribe", json=data)
+        response = requests.put(f"{API_HOST}/unsubscribe", json=data, headers=api_key_headers)
     else:
-        data = {
-            "user_chat_id": user_chat_id,
-            "selection": call.data
-        }
-        response = requests.put(f"{API_HOST}/subscribe", json=data)
+        data["selection"] = call.data
+        response = requests.put(f"{API_HOST}/subscribe", json=data, headers=api_key_headers)
     #  response
     bot.answer_callback_query(call.id, response.json())
 
@@ -120,7 +117,7 @@ def command_unsubscribe(message):
     data = {
         "user_chat_id": user_chat_id
     }
-    requests.put(f"{API_HOST}/unsubscribe", json=data)
+    requests.put(f"{API_HOST}/unsubscribe", json=data, headers=api_key_headers)
     #  menu buttons
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(
@@ -137,7 +134,7 @@ def command_my_subscriptions(message):
     bot.send_message(message.from_user.id, "Give me a second...")
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
-    response = requests.get(f"{API_HOST}/my_subscriptions?user_chat_id={user_chat_id}")
+    response = requests.get(f"{API_HOST}/my_subscriptions?user_chat_id={user_chat_id}", headers=api_key_headers)
     #  menu buttons
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     #  result depended on API response
@@ -173,10 +170,9 @@ def command_stats(message):
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     #  use API method to start command execution
-    response = requests.get(f"{API_HOST}/stats?telegram_api_token={BOT_TOKEN}")
-    stats = response.json()
+    response = requests.get(f"{API_HOST}/stats", headers=api_key_headers)
     #  response
-    bot.send_message(user_chat_id, stats, parse_mode="Markdown")
+    bot.send_message(user_chat_id, response.json(), parse_mode="Markdown")
 
 
 @bot.message_handler(commands=["help"])
@@ -185,10 +181,9 @@ def command_help(message):
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
     #  text
-    response = requests.get(f"{API_HOST}/help")
-    help_text = response.json()
+    response = requests.get(f"{API_HOST}/help", headers=api_key_headers)
     #  response
-    bot.send_message(user_chat_id, help_text, parse_mode="Markdown", disable_notification=True)
+    bot.send_message(user_chat_id, response.json(), parse_mode="Markdown", disable_notification=True)
 
 
 if __name__ == "__main__":
