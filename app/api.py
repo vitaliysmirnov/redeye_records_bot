@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 # -*- coding: utf-8 -*-
+
 import logging
 from datetime import datetime, timezone
 
@@ -428,7 +429,7 @@ class Stats(Resource):
         }
     )
     def get(self):
-        """Users statistics (available only for admin)"""
+        """Users statistics"""
         try:
             telegram_api_token = request.args["telegram_api_token"]
             if telegram_api_token == BOT_TOKEN:
