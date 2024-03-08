@@ -33,8 +33,7 @@ def get_message():
 @bot.message_handler(commands=["start"])
 def command_start(message):
     """/start command handler"""
-    message_text = f"Hi *{message.from_user.first_name}*!\n\n"\
-                   "This bot can send you notifications when new items appear at Redeye Records"
+    message_text = f"Hi *{message.from_user.first_name}*!"
     bot.send_message(message.from_user.id, message_text, parse_mode="Markdown")
     #  user's data collection
     user_chat_id = message.from_user.id
