@@ -8,7 +8,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from flask import Flask, request, render_template
 
-from config import BOT_TOKEN, API_HOST, APP_HOST, api_key_headers
+from config import BOT_TOKEN, ADMIN_CHAT_ID, API_HOST, APP_HOST, api_key_headers
 from app.api import blueprint
 
 
@@ -167,10 +167,11 @@ def command_stats(message):
     """/stats command handler"""
     #  get user_chat_id from message to identify user
     user_chat_id = message.chat.id
-    #  use API method to start command execution
-    response = requests.get(f"{API_HOST}/stats", headers=api_key_headers)
-    #  response
-    bot.send_message(user_chat_id, response.json(), parse_mode="Markdown")
+    if user_chat_id == ADMIN_CHAT_ID:
+        #  use API method to start command execution
+        response = requests.get(f"{API_HOST}/stats", headers=api_key_headers)
+        #  response
+        bot.send_message(user_chat_id, response.json(), parse_mode="Markdown")
 
 
 @bot.message_handler(commands=["help"])

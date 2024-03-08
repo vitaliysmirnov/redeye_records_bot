@@ -13,6 +13,7 @@ load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 DB_PATH = os.path.join(basedir, "app", "db", "database.db")
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
