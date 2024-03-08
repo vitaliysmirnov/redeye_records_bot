@@ -20,6 +20,9 @@ REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
 APP_HOST = "https://redeyerecordsbot.ru/"
 API_HOST = APP_HOST + "api/v1"
 
+REDEYE_IDS_LIMIT = 1000
+PARSER_COOL_DOWN = 300
+
 api_key_headers = {"x-api-key": API_KEY}
 
 selections = {

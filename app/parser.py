@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-from config import API_HOST, API_KEY, DB_PATH, REDEYE_URL, REDEYE_CDN, api_key_headers, selections, tables
+from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, REDEYE_IDS_LIMIT, api_key_headers, selections, tables
 
 
 class Parser:
@@ -166,7 +166,7 @@ class Parser:
                         logging.info(f"New release added to DB. Redeye ID: {redeye_id}")
                         db_cursor.execute(f"SELECT count(item_id) FROM {table}")
                         count_item_id = db_cursor.fetchone()
-                        if count_item_id > (50,):
+                        if count_item_id > (REDEYE_IDS_LIMIT,):
                             db_cursor.execute(
                                 f"""
                                     DELETE FROM {table} WHERE item_id = (SELECT min(item_id) FROM {table})

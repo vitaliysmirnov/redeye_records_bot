@@ -7,7 +7,7 @@ import logging
 
 from time import sleep
 
-from config import basedir
+from config import basedir, PARSER_COOL_DOWN
 from app.parser import Parser
 
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     try:
         p.db_initiation()
         while True:
-            sleep(600)
+            sleep(PARSER_COOL_DOWN)
             p.check_new_releases()
     except Exception as e:
         logging.critical(e)
