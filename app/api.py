@@ -583,7 +583,7 @@ class Help(Resource):
         """A list of available actions"""
         help_text = "🌐 *redeyerecords.co.uk* — dance music specialists since 1992\n\n" \
                     "*/selections* to choose selections\n\n" \
-                    "*/my_subscriptions* to get your subscriptions\n\n" \
+                    "*/my_subscriptions* to get list of your subscriptions\n\n" \
                     "*/unsubscribe* to unsubscribe"
         try:
             return help_text, 200
