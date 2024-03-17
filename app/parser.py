@@ -177,11 +177,8 @@ class Parser:
                             "redeye_id": redeye_id,
                             "table": self.parser_json[genre][section]["table"]
                         }
-                        # request = requests.post(f"{API_HOST}/new_release", json=data, headers=api_key_headers)
-                        # if request.status_code != 200:
-                        #     logging.warning(f"Can't reach API! Status code: {request.status_code}")
-
-                        print("NEW RELEASE")
-                        print(data)
+                        request = requests.post(f"{API_HOST}/new_release", json=data, headers=api_key_headers)
+                        if request.status_code != 200:
+                            logging.warning(f"Can't reach API! Status code: {request.status_code}")
 
         db_connection.close()
