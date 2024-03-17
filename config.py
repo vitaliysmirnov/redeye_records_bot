@@ -17,12 +17,19 @@ ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 DB_PATH = os.path.join(basedir, "app", "db", "database.db")
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
+PARSER_JSON = os.path.join(basedir, "parser.json")
 APP_HOST = "https://redeyerecordsbot.ru/"
 API_HOST = APP_HOST + "api/v1"
 
 PARSER_COOL_DOWN = 300
 
 api_key_headers = {"x-api-key": API_KEY}
+
+headers = {
+    "accept": "*/*",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+                  " Chrome/73.0.3683.103 Safari/537.36"
+}
 
 selections = {
     "bass_music": "BASS MUSIC",
@@ -42,3 +49,14 @@ tables = {
     "discount50": "50% SALE",
     "discount75": "75% SALE",
 }
+genre_ids = [
+    "bassSubmenu",
+    "dabSubmenu",
+    "expSubmenu",
+    "fhsSubmenu",
+    "hdSubmenu",
+    "regSubmenu",
+    "tecSubmenu",
+    "balSubmenu",
+    "altSubmenu"
+]
