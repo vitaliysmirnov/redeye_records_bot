@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, PARSER_JSON, api_key_headers, genre_ids, headers
+from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, PARSER_JSON, GENRES_JSON, api_key_headers, genre_ids, headers
 
 
 class Parser:
@@ -21,22 +21,22 @@ class Parser:
         session = requests.Session()
         request = session.get(REDEYE_URL, headers=headers)
         soup = BeautifulSoup(request.content, "html.parser")
-        res = dict()
+        parser_json = dict()
         for g in genre_ids:
             genre = soup.find("a", attrs={"href": f"#{g}"}).text
-            res[genre] = {}
+            parser_json[genre] = {}
             genre_li = soup.find("ul", attrs={"id": g})
             for li in genre_li.findAll("li"):
                 if "chart" not in li.find("a")["href"].lower():
-                    res[genre][li.find("a").text] = {
+                    parser_json[genre][li.find("a").text] = {
                         "url": li.find("a")["href"],
                         "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {li.find("a").text}").lower()
                     }
 
         with open(PARSER_JSON, "w") as f:
-            json.dump(res, f, indent=4)
+            json.dump(parser_json, f, indent=4)
 
-        self.parser_json = res
+        self.parser_json = parser_json
 
     def get_releases_from_url(self, url):
         """Get data from redeyerecords"""
@@ -166,10 +166,10 @@ class Parser:
                         db_connection.commit()
                         logging.info(f"New item added to DB. Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]}")
 
-                        if self.parser_json[genre][section] == "New Releases" and "Pre-order" in price:
+                        if "new-releases" in self.parser_json[genre][section]["url"] and "Pre-order" in price:
                             logging.info(f"Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]} is a pre-order listed in new releases section. Ignore it")
                             continue
-                        if "Out Of Stock" in status:
+                        if "sale" in self.parser_json[genre][section]["url"] and "Out Of Stock" in status:
                             logging.info(f"Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]} is out of stock. Ignore it")
                             continue
 
