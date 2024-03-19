@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, PARSER_JSON, GENRES_JSON, api_key_headers, genre_ids, headers
+from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, PARSER_JSON, api_key_headers, genre_ids, headers
 
 
 class Parser:
@@ -27,7 +27,7 @@ class Parser:
             parser_json[genre] = {}
             genre_li = soup.find("ul", attrs={"id": g})
             for li in genre_li.findAll("li"):
-                if "chart" not in li.find("a")["href"].lower():
+                if "chart" not in li.find("a")["href"].lower() and "Pre-Order Releases" not in li.find("a").text:
                     parser_json[genre][li.find("a").text] = {
                         "url": li.find("a")["href"],
                         "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {li.find("a").text}").lower()
@@ -166,9 +166,6 @@ class Parser:
                         db_connection.commit()
                         logging.info(f"New item added to DB. Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]}")
 
-                        if "new-releases" in self.parser_json[genre][section]["url"] and "Pre-order" in price:
-                            logging.info(f"Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]} is a pre-order listed in new releases section. Ignore it")
-                            continue
                         if "sale" in self.parser_json[genre][section]["url"] and "Out Of Stock" in status:
                             logging.info(f"Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]} is out of stock. Ignore it")
                             continue
