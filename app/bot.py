@@ -8,7 +8,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from flask import Flask, request, render_template
 
-from config import BOT_TOKEN, ADMIN_CHAT_ID, API_HOST, APP_HOST, api_key_headers
+from config import BOT_TOKEN, ADMIN_CHAT_ID, API_HOST, APP_HOST, api_key_headers, genres
 from app.api import blueprint
 
 
@@ -71,19 +71,10 @@ def command_selections(message):
     #  menu buttons
     reply_markup = InlineKeyboardMarkup()
     reply_markup.row_width = 1
-    reply_markup.add(
-        InlineKeyboardButton("BASS MUSIC", callback_data="bass_music"),
-        InlineKeyboardButton("DRUM & BASS • JUNGLE", callback_data="drum_and_bass"),
-        InlineKeyboardButton("AMBIENT • EXPERIMENTAL • DRONE", callback_data="experimental"),
-        InlineKeyboardButton("HIP HOP • SOUL • JAZZ • FUNK", callback_data="funk_hip_hop_soul"),
-        InlineKeyboardButton("HOUSE • DISCO", callback_data="house_disco"),
-        InlineKeyboardButton("REGGAE", callback_data="reggae"),
-        InlineKeyboardButton("TECHNO • ELECTRO", callback_data="techno_electro"),
-        InlineKeyboardButton("BALEARIC • DOWNTEMPO", callback_data="balearic_and_downtempo"),
-        InlineKeyboardButton("ALTERNATIVE / INDIE / FOLK / PUNK", callback_data="alternative_indie_folk_punk"),
-        InlineKeyboardButton("unsubscribe", callback_data="unsubscribe")
-    )
-    message_text = "Tap on selections you want to follow"
+    buttons = [InlineKeyboardButton(genres[genre], callback_data=genre) for genre in genres]
+    buttons.append(InlineKeyboardButton("unsubscribe", callback_data="unsubscribe"))
+    reply_markup.add(*buttons)
+    message_text = "Tap on genres you want to follow"
     #  response
     bot.send_message(user_chat_id, message_text, reply_markup=reply_markup, parse_mode="Markdown", disable_notification=True)
 
@@ -100,7 +91,7 @@ def callback_query(call):
     if call.data == "unsubscribe":
         response = requests.put(f"{API_HOST}/unsubscribe", json=data, headers=api_key_headers)
     else:
-        data["selection"] = call.data
+        data["genre"] = call.data
         response = requests.put(f"{API_HOST}/subscribe", json=data, headers=api_key_headers)
     #  response
     bot.answer_callback_query(call.id, response.json())

@@ -2,6 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 
+import re
 import logging
 from functools import wraps
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from flask import request, Blueprint
 from flask_restx import Api, Resource, fields
 
-from config import BOT_TOKEN, API_KEY, DB_PATH, selections
+from config import BOT_TOKEN, API_KEY, DB_PATH, genres
 
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
@@ -132,13 +133,13 @@ class Start(Resource):
                     f"""
                         UPDATE subscriptions
                         SET bass_music = false,
-                            drum_and_bass = false,
-                            experimental = false,
-                            funk_hip_hop_soul = false,
+                            drum_bass_jungle = false,
+                            ambient_experimental_drone = false,
+                            hip_hop_soul_jazz_funk = false,
                             house_disco = false,
                             reggae = false,
                             techno_electro = false,
-                            balearic_and_downtempo = false,
+                            balearic_downtempo = false,
                             alternative_indie_folk_punk = false
                         WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                     ;
@@ -172,8 +173,8 @@ class Subscribe(Resource):
                     description="User's Telegram chat ID",
                     required=True
                 ),
-                "selection": fields.String(
-                    description="Selection to follow",
+                "genre": fields.String(
+                    description="Genre to follow",
                     required=True
                 )
             }
@@ -192,13 +193,13 @@ class Subscribe(Resource):
         """Set up user's subscriptions"""
         try:
             user_chat_id = request.json["user_chat_id"]
-            selection = request.json["selection"]
+            genre = request.json["genre"]
             db_connection = sqlite3.connect(DB_PATH)
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 f"""
                     UPDATE subscriptions
-                    SET {selection} = true
+                    SET {genre} = true
                     WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                 ;
                 """, (user_chat_id,)
@@ -208,7 +209,7 @@ class Subscribe(Resource):
 
             status_code = 200
 
-            return f"{responses[status_code]}. Subscribed to {selections[selection]}", status_code
+            return f"{responses[status_code]}. Subscribed to {genres[genre]}", status_code
 
         except Exception as e:
             api.abort(500, e.__doc__, status=responses[500], status_сode=500)
@@ -251,13 +252,13 @@ class Unsubscribe(Resource):
                 f"""
                     UPDATE subscriptions
                     SET bass_music = false,
-                        drum_and_bass = false,
-                        experimental = false,
-                        funk_hip_hop_soul = false,
+                        drum_bass_jungle = false,
+                        ambient_experimental_drone = false,
+                        hip_hop_soul_jazz_funk = false,
                         house_disco = false,
                         reggae = false,
                         techno_electro = false,
-                        balearic_and_downtempo = false,
+                        balearic_downtempo = false,
                         alternative_indie_folk_punk = false
                     WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
                 ;
@@ -307,13 +308,13 @@ class MySubscriptions(Resource):
             db_cursor.execute(
                 """
                     SELECT bass_music,
-                           drum_and_bass,
-                           experimental,
-                           funk_hip_hop_soul,
+                           drum_bass_jungle,
+                           ambient_experimental_drone,
+                           hip_hop_soul_jazz_funk,
                            house_disco,
                            reggae,
                            techno_electro,
-                           balearic_and_downtempo,
+                           balearic_downtempo,
                            alternative_indie_folk_punk
                     FROM subscriptions
                     WHERE user_id = (SELECT user_id FROM users WHERE user_chat_id = ?)
@@ -323,21 +324,11 @@ class MySubscriptions(Resource):
             subscriptions = db_cursor.fetchone()
             db_connection.close()
 
-            selections_l = list(selections.keys())
-            result_raw = dict()
-            for i in range(len(selections_l)):
-                result_raw[selections_l[i]] = subscriptions[i]
             result = dict()
-
-            result["BASS MUSIC"] = result_raw.pop("bass_music")
-            result["DRUM & BASS • JUNGLE"] = result_raw.pop("drum_and_bass")
-            result["AMBIENT • EXPERIMENTAL • DRONE"] = result_raw.pop("experimental")
-            result["HIP HOP • SOUL • JAZZ • FUNK"] = result_raw.pop("funk_hip_hop_soul")
-            result["HOUSE • DISCO"] = result_raw.pop("house_disco")
-            result["REGGAE"] = result_raw.pop("reggae")
-            result["TECHNO • ELECTRO"] = result_raw.pop("techno_electro")
-            result["BALEARIC • DOWNTEMPO"] = result_raw.pop("balearic_and_downtempo")
-            result["ALTERNATIVE / INDIE / FOLK / PUNK"] = result_raw.pop("alternative_indie_folk_punk")
+            counter = 0
+            for genre in genres:
+                result[genres[genre]] = subscriptions[counter]
+                counter += 1
 
             return result, 200
 
@@ -387,18 +378,19 @@ class NewRelease(Resource):
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 f"""
-                    SELECT item, samples, selection FROM {table} WHERE redeye_id = ?
+                    SELECT title, cat, tracklist, price, release_url, samples, genre, section FROM {table} WHERE redeye_id = ?
                 ;
                 """, (redeye_id,)
             )
-            item, samples, selection = db_cursor.fetchone()
+            title, cat, tracklist, price, release_url, samples, genre, section = db_cursor.fetchone()
+            release = f"*{genre.upper()}*\n{section.upper()}\n\n{title}\n_{cat}_\n\n{tracklist}\n\n{price}\n{release_url}"
 
             db_cursor.execute(
                 f"""
                     SELECT users.user_chat_id
                     FROM users
                     JOIN subscriptions ON subscriptions.user_id = users.user_id
-                    WHERE subscriptions.{selection} = true AND users.is_active = true
+                    WHERE subscriptions.{re.sub(r" / |-| & |\s+|% ", "_", genre).lower()} = true AND users.is_active = true
                 ;
                 """
             )
@@ -435,13 +427,11 @@ class NewRelease(Resource):
                         button_c = InlineKeyboardButton(text="PLAY C", url=samples[2])
                         button_d = InlineKeyboardButton(text="PLAY D", url=samples[3])
                         reply_markup.add(button_c, button_d)
-                    else:
-                        pass
 
                 for user_chat_id in users:
                     try:
                         logging.debug(f"Sending release to user chat id: {user_chat_id}")
-                        bot.send_message(user_chat_id, item, reply_markup=reply_markup, parse_mode="Markdown")
+                        bot.send_message(user_chat_id, release, reply_markup=reply_markup, parse_mode="Markdown")
                     except ApiException as e:
                         if "bot was blocked by the user" in e.args[0]:
                             db_cursor.execute(
@@ -498,62 +488,23 @@ class Stats(Resource):
                 """
             )
             users = db_cursor.fetchone()
-            db_cursor.execute(
-                """
-                    SELECT t1.bass_music_subs_active, 
-                           t2.drum_and_bass_subs_active, 
-                           t3.experimental_subs_active, 
-                           t4.funk_hip_hop_soul_subs_active, 
-                           t5.house_disco_subs_active, 
-                           t6.reggae_subs_active,
-                           t7.techno_electro_subs_active,
-                           t8.balearic_and_downtempo_subs_active,
-                           t9.alternative_indie_folk_punk_subs_active,
-                           t10.bass_music_subs_total, 
-                           t11.drum_and_bass_subs_total, 
-                           t12.experimental_subs_total, 
-                           t13.funk_hip_hop_soul_subs_total, 
-                           t14.house_disco_subs_total, 
-                           t15.reggae_subs_total, 
-                           t16.techno_electro_subs_total, 
-                           t17.balearic_and_downtempo_subs_total, 
-                           t18.alternative_indie_folk_punk_subs_total
-                    FROM
-                    (SELECT count(u.user_id) AS bass_music_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND bass_music = true) AS t1,
-                    (SELECT count(u.user_id) AS drum_and_bass_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND drum_and_bass = true) AS t2,
-                    (SELECT count(u.user_id) AS experimental_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND experimental = true) AS t3,
-                    (SELECT count(u.user_id) AS funk_hip_hop_soul_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND funk_hip_hop_soul = true) AS t4,
-                    (SELECT count(u.user_id) AS house_disco_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND house_disco = true) AS t5,
-                    (SELECT count(u.user_id) AS reggae_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND reggae = true) AS t6,
-                    (SELECT count(u.user_id) AS techno_electro_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND techno_electro = true) AS t7,
-                    (SELECT count(u.user_id) AS balearic_and_downtempo_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND balearic_and_downtempo = true) AS t8,
-                    (SELECT count(u.user_id) AS alternative_indie_folk_punk_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id 
-                        WHERE u.is_active = true AND alternative_indie_folk_punk = true) AS t9,
-                    (SELECT count(*) AS bass_music_subs_total FROM subscriptions WHERE bass_music = true) AS t10,
-                    (SELECT count(*) AS drum_and_bass_subs_total FROM subscriptions WHERE drum_and_bass = true) AS t11,
-                    (SELECT count(*) AS experimental_subs_total FROM subscriptions WHERE experimental = true) AS t12,
-                    (SELECT count(*) AS funk_hip_hop_soul_subs_total FROM subscriptions WHERE funk_hip_hop_soul = true) AS t13,
-                    (SELECT count(*) AS house_disco_subs_total FROM subscriptions WHERE house_disco = true) AS t14,
-                    (SELECT count(*) AS reggae_subs_total FROM subscriptions WHERE reggae = true) AS t15,
-                    (SELECT count(*) AS techno_electro_subs_total FROM subscriptions WHERE techno_electro = true) AS t16,
-                    (SELECT count(*) AS balearic_and_downtempo_subs_total FROM subscriptions WHERE balearic_and_downtempo = true) AS t17,
-                    (SELECT count(*) AS alternative_indie_folk_punk_subs_total FROM subscriptions WHERE alternative_indie_folk_punk = true) AS t18
-                ;
-                """
-            )
+
+            query = "SELECT "
+            for n in range(len(genres)):
+                query += f"t{n + 1}.{list(genres.keys())[n]}_subs_active, "
+            for n in range(len(genres)):
+                query += f"t{len(genres) + n + 1}.{list(genres.keys())[n]}_subs_total{", " if n != len(genres) - 1 else " "}"
+            query += "FROM "
+            for n in range(len(genres)):
+                query += f"(SELECT count(u.user_id) AS {list(genres.keys())[n]}_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id WHERE u.is_active = true AND {list(genres.keys())[n]} = true) AS t{n + 1}, "
+            for n in range(len(genres)):
+                query += f"(SELECT count(*) AS {list(genres.keys())[n]}_subs_total FROM subscriptions WHERE {list(genres.keys())[n]} = true) AS t{len(genres) + n + 1}{", " if n != len(genres) - 1 else ";"}"
+            db_cursor.execute(query)
             subs = db_cursor.fetchone()
             db_connection.close()
             stats = f"*users*: active {users[0]}, total {users[1]}\n"
             for i in range(int(len(subs) / 2)):
-                stats += f"\n*{list(selections.keys())[i]}*: active {subs[i]}, total {subs[int(len(subs) / 2) + i]}"
+                stats += f"\n*{list(genres.keys())[i]}*: active {subs[i]}, total {subs[int(len(subs) / 2) + i]}"
 
             return stats, 200
 

@@ -30,25 +30,6 @@ headers = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
                   " Chrome/73.0.3683.103 Safari/537.36"
 }
-
-selections = {
-    "bass_music": "BASS MUSIC",
-    "drum_and_bass": "DRUM & BASS • JUNGLE",
-    "experimental": "AMBIENT • EXPERIMENTAL • DRONE",
-    "funk_hip_hop_soul": "HIP HOP • SOUL • JAZZ • FUNK",
-    "house_disco": "HOUSE • DISCO",
-    "reggae": "REGGAE",
-    "techno_electro": "TECHNO • ELECTRO",
-    "balearic_and_downtempo": "BALEARIC • DOWNTEMPO",
-    "alternative_indie_folk_punk": "ALTERNATIVE / INDIE / FOLK / PUNK",
-}
-tables = {
-    "preorders": "PRE-ORDER",
-    "new": "NEW RELEASE",
-    "discount30": "30% SALE",
-    "discount50": "50% SALE",
-    "discount75": "75% SALE",
-}
 genre_ids = [
     "bassSubmenu",
     "dabSubmenu",
@@ -60,3 +41,14 @@ genre_ids = [
     "balSubmenu",
     "altSubmenu"
 ]
+genres = {
+    "bass_music": "BASS MUSIC",
+    "drum_bass_jungle": "DRUM & BASS / JUNGLE",
+    "ambient_experimental_drone": "AMBIENT / EXPERIMENTAL / DRONE",
+    "hip_hop_soul_jazz_funk": "HIP HOP / SOUL / JAZZ / FUNK",
+    "house_disco": "HOUSE / DISCO",
+    "reggae": "REGGAE",
+    "techno_electro": "TECHNO / ELECTRO",
+    "balearic_downtempo": "BALEARIC / DOWNTEMPO",
+    "alternative_indie_folk_punk": "ALTERNATIVE / INDIE / FOLK / PUNK",
+}
