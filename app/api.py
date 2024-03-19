@@ -385,12 +385,13 @@ class NewRelease(Resource):
             title, cat, tracklist, price, release_url, samples, genre, section = db_cursor.fetchone()
             release = f"*{genre.upper()}*\n{section.upper()}\n\n{title}\n_{cat}_\n\n{tracklist}\n\n{price}\n{release_url}"
 
+            subscriptions_genre = re.sub(r" / |-| & |\s+|% ", "_", genre).lower()
             db_cursor.execute(
                 f"""
                     SELECT users.user_chat_id
                     FROM users
                     JOIN subscriptions ON subscriptions.user_id = users.user_id
-                    WHERE subscriptions.{re.sub(r" / |-| & |\s+|% ", "_", genre).lower()} = true AND users.is_active = true
+                    WHERE subscriptions.{subscriptions_genre} = true AND users.is_active = true
                 ;
                 """
             )
@@ -493,12 +494,12 @@ class Stats(Resource):
             for n in range(len(genres)):
                 query += f"t{n + 1}.{list(genres.keys())[n]}_subs_active, "
             for n in range(len(genres)):
-                query += f"t{len(genres) + n + 1}.{list(genres.keys())[n]}_subs_total{", " if n != len(genres) - 1 else " "}"
+                query += f"t{len(genres) + n + 1}.{list(genres.keys())[n]}_subs_total{', ' if n != len(genres) - 1 else ' '}"
             query += "FROM "
             for n in range(len(genres)):
                 query += f"(SELECT count(u.user_id) AS {list(genres.keys())[n]}_subs_active FROM users u JOIN subscriptions s on u.user_id = s.user_id WHERE u.is_active = true AND {list(genres.keys())[n]} = true) AS t{n + 1}, "
             for n in range(len(genres)):
-                query += f"(SELECT count(*) AS {list(genres.keys())[n]}_subs_total FROM subscriptions WHERE {list(genres.keys())[n]} = true) AS t{len(genres) + n + 1}{", " if n != len(genres) - 1 else ";"}"
+                query += f"(SELECT count(*) AS {list(genres.keys())[n]}_subs_total FROM subscriptions WHERE {list(genres.keys())[n]} = true) AS t{len(genres) + n + 1}{', ' if n != len(genres) - 1 else ';'}"
             db_cursor.execute(query)
             subs = db_cursor.fetchone()
             db_connection.close()

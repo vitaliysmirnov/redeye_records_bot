@@ -27,10 +27,11 @@ class Parser:
             parser_json[genre] = {}
             genre_li = soup.find("ul", attrs={"id": g})
             for li in genre_li.findAll("li"):
-                if "chart" not in li.find("a")["href"].lower() and "Pre-Order Releases" not in li.find("a").text:
-                    parser_json[genre][li.find("a").text] = {
+                section = li.find("a").text
+                if "chart" not in li.find("a")["href"].lower() and "Pre-Order Releases" not in section:
+                    parser_json[genre][section] = {
                         "url": li.find("a")["href"],
-                        "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {li.find("a").text}").lower()
+                        "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {section}").lower()
                     }
 
         with open(PARSER_JSON, "w") as f:
@@ -61,16 +62,17 @@ class Parser:
 
         for genre in self.parser_json:
             for section in self.parser_json[genre]:
+                table = self.parser_json[genre][section]["table"]
                 db_cursor.execute(
                     f"""
-                        DROP TABLE IF EXISTS {self.parser_json[genre][section]["table"]}
+                        DROP TABLE IF EXISTS {table}
                     """
                 )
-                logging.info(f"Table {self.parser_json[genre][section]["table"]} deleted")
+                logging.info(f"Table {table} deleted")
                 db_connection.commit()
                 db_cursor.execute(
                     f"""
-                        CREATE TABLE {self.parser_json[genre][section]["table"]} (
+                        CREATE TABLE {table} (
                             item_id INT,
                             redeye_id INT,
                             title VARCHAR,
@@ -87,7 +89,7 @@ class Parser:
                     """
                 )
                 db_connection.commit()
-                logging.info(f"New table {self.parser_json[genre][section]["table"]} created")
+                logging.info(f"New table {table} created")
 
         db_connection.close()
 
@@ -122,17 +124,18 @@ class Parser:
 
         for genre in self.parser_json:
             for section in self.parser_json[genre]:
-                releases = self.get_releases_from_url(self.parser_json[genre][section]["url"])
-                releases.extend(self.get_releases_from_url(f"{self.parser_json[genre][section]["url"]}/page-2")) if len(releases) == 50 else None
-                logging.info(f"Total of {len(releases)} releases parsed for {self.parser_json[genre][section]["url"]}")
+                table, url = self.parser_json[genre][section]["table"], self.parser_json[genre][section]["url"]
+                releases = self.get_releases_from_url(url)
+                releases.extend(self.get_releases_from_url(f"{url}/page-2")) if len(releases) == 50 else None
+                logging.info(f"Total of {len(releases)} releases parsed for {url}")
                 for release in releases:
                     redeye_id, title, cat, tracklist, price, release_url, samples, img, status = self.parse_release_data(release)
                     db_cursor.execute(
                         f"""
-                            INSERT INTO {self.parser_json[genre][section]["table"]} 
+                            INSERT INTO {table} 
                                 (item_id, redeye_id, title, cat, tracklist, price, release_url, samples, img, genre, section, registered_at)
                             VALUES 
-                                ((SELECT count(item_id) FROM {self.parser_json[genre][section]["table"]}) + 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ((SELECT count(item_id) FROM {table}) + 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ;
                         """, (redeye_id, title, cat, tracklist, price, release_url, samples, img, genre, section, str(datetime.now(timezone.utc)))
                     )
@@ -147,27 +150,28 @@ class Parser:
 
         for genre in self.parser_json:
             for section in self.parser_json[genre]:
-                db_cursor.execute(f"SELECT redeye_id FROM {self.parser_json[genre][section]["table"]}")
+                table, url = self.parser_json[genre][section]["table"], self.parser_json[genre][section]["url"]
+                db_cursor.execute(f"SELECT redeye_id FROM {table}")
                 db_redeye_ids = db_cursor.fetchall()
-                logging.debug(f"Redeye IDs in {self.parser_json[genre][section]["table"]}: {db_redeye_ids}")
-                releases = self.get_releases_from_url(self.parser_json[genre][section]["url"])
+                logging.debug(f"Redeye IDs in {table}: {db_redeye_ids}")
+                releases = self.get_releases_from_url(url)
                 for release in releases:
                     redeye_id, title, cat, tracklist, price, release_url, samples, img, status = self.parse_release_data(release)
                     if (redeye_id,) not in db_redeye_ids:
                         db_cursor.execute(
                             f"""
-                                INSERT INTO {self.parser_json[genre][section]["table"]} 
+                                INSERT INTO {table} 
                                     (item_id, redeye_id, title, cat, tracklist, price, release_url, samples, img, genre, section, registered_at)
                                 VALUES 
-                                    ((CASE WHEN (SELECT count(item_id) FROM {self.parser_json[genre][section]["table"]}) == 0 THEN 1 ELSE (SELECT max(item_id) FROM {self.parser_json[genre][section]["table"]}) + 1 END), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    ((CASE WHEN (SELECT count(item_id) FROM {table}) == 0 THEN 1 ELSE (SELECT max(item_id) FROM {table}) + 1 END), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             ;
                             """, (redeye_id, title, cat, tracklist, price, release_url, samples, img, genre, section, str(datetime.now(timezone.utc)))
                         )
                         db_connection.commit()
-                        logging.info(f"New item added to DB. Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]}")
+                        logging.info(f"New item added to DB. Redeye ID: {redeye_id}, table: {table}")
 
-                        if "sale" in self.parser_json[genre][section]["url"] and "Out Of Stock" in status:
-                            logging.info(f"Redeye ID: {redeye_id}, table: {self.parser_json[genre][section]["table"]} is out of stock. Ignore it")
+                        if "sale" in url and "Out Of Stock" in status:
+                            logging.info(f"Redeye ID: {redeye_id}, table: {table} is out of stock. Ignore it")
                             continue
 
                         data = {
