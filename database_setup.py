@@ -5,7 +5,7 @@
 import sqlite3
 from os import path
 
-from config import DB_PATH
+from config import DB_PATH, genres
 
 
 def main():
@@ -33,20 +33,7 @@ create_users = """
 );
 """
 
-create_subscriptions = """
-    CREATE TABLE subscriptions (
-        user_id INT PRIMARY KEY,
-        bass_music BOOLEAN,
-        drum_and_bass BOOLEAN,
-        experimental BOOLEAN,
-        funk_hip_hop_soul BOOLEAN,
-        house_disco BOOLEAN,
-        reggae BOOLEAN,
-        techno_electro BOOLEAN,
-        balearic_and_downtempo BOOLEAN,
-        alternative_indie_folk_punk BOOLEAN
-);
-"""
+create_subscriptions = f"CREATE TABLE subscriptions (user_id INT PRIMARY KEY, {', '.join([genre + ' BOOLEAN' for genre in genres])});"
 
 
 if __name__ == "__main__":

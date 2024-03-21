@@ -11,6 +11,16 @@ from config import basedir, PARSER_COOL_DOWN
 from app.parser import Parser
 
 
+def main(p):
+    try:
+        while True:
+            sleep(PARSER_COOL_DOWN)
+            p.check_new_releases()
+    except Exception as e:
+        logging.critical(e)
+        main(p)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.DEBUG,
@@ -19,11 +29,6 @@ if __name__ == "__main__":
         format="%(asctime)s %(levelname)s %(message)s"
     )
 
-    p = Parser()
-    try:
-        p.db_initiation()
-        while True:
-            sleep(PARSER_COOL_DOWN)
-            p.check_new_releases()
-    except Exception as e:
-        logging.critical(e)
+    parser = Parser()
+    parser.db_initiation()
+    main(parser)
