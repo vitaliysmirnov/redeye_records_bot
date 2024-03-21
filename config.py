@@ -17,6 +17,7 @@ ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 DB_PATH = os.path.join(basedir, "app", "db", "database.db")
 REDEYE_URL = "https://www.redeyerecords.co.uk"
 REDEYE_CDN = "https://redeye-391831.c.cdn77.org"
+PARSER_JSON = os.path.join(basedir, "parser.json")
 APP_HOST = "https://redeyerecordsbot.ru/"
 API_HOST = APP_HOST + "api/v1"
 
@@ -24,21 +25,30 @@ PARSER_COOL_DOWN = 300
 
 api_key_headers = {"x-api-key": API_KEY}
 
-selections = {
-    "bass_music": "BASS MUSIC",
-    "drum_and_bass": "DRUM & BASS • JUNGLE",
-    "experimental": "AMBIENT • EXPERIMENTAL • DRONE",
-    "funk_hip_hop_soul": "HIP HOP • SOUL • JAZZ • FUNK",
-    "house_disco": "HOUSE • DISCO",
-    "reggae": "REGGAE",
-    "techno_electro": "TECHNO • ELECTRO",
-    "balearic_and_downtempo": "BALEARIC • DOWNTEMPO",
-    "alternative_indie_folk_punk": "ALTERNATIVE / INDIE / FOLK / PUNK",
+headers = {
+    "accept": "*/*",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+                  " Chrome/73.0.3683.103 Safari/537.36"
 }
-tables = {
-    "preorders": "PRE-ORDER",
-    "new": "NEW RELEASE",
-    "discount30": "30% SALE",
-    "discount50": "50% SALE",
-    "discount75": "75% SALE",
+genre_ids = [
+    "bassSubmenu",
+    "dabSubmenu",
+    "expSubmenu",
+    "fhsSubmenu",
+    "hdSubmenu",
+    "regSubmenu",
+    "tecSubmenu",
+    "balSubmenu",
+    "altSubmenu"
+]
+genres = {
+    "bass_music": "BASS MUSIC",
+    "drum_bass_jungle": "DRUM & BASS / JUNGLE",
+    "ambient_experimental_drone": "AMBIENT / EXPERIMENTAL / DRONE",
+    "hip_hop_soul_jazz_funk": "HIP HOP / SOUL / JAZZ / FUNK",
+    "house_disco": "HOUSE / DISCO",
+    "reggae": "REGGAE",
+    "techno_electro": "TECHNO / ELECTRO",
+    "balearic_downtempo": "BALEARIC / DOWNTEMPO",
+    "alternative_indie_folk_punk": "ALTERNATIVE / INDIE / FOLK / PUNK",
 }
