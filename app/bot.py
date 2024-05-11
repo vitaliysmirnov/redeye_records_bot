@@ -8,7 +8,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from flask import Flask, request, render_template
 
-from config import BOT_TOKEN, ADMIN_CHAT_ID, API_HOST, APP_HOST, api_key_headers, genres
+from config import BOT_TOKEN, ADMIN_CHAT_ID, API_HOST, api_key_headers, genres
 from app.api import blueprint
 
 
@@ -173,8 +173,3 @@ def command_help(message):
     response = requests.get(f"{API_HOST}/help", headers=api_key_headers)
     #  response
     bot.send_message(user_chat_id, response.json(), parse_mode="Markdown", disable_notification=True)
-
-
-if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.set_webhook(url=APP_HOST + BOT_TOKEN)

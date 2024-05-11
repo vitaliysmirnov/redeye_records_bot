@@ -2,10 +2,13 @@
 #
 # -*- coding: utf-8 -*-
 
+import os
+import logging
+
 import sqlite3
 from os import path
 
-from config import DB_PATH, genres
+from config import DB_PATH, genres, basedir
 
 
 def main():
@@ -16,9 +19,9 @@ def main():
         db_cursor.execute(create_subscriptions)
         db_connection.commit()
         db_connection.close()
-        print("Database created")
+        logging.info("Database created")
     else:
-        print("Database already exists")
+        logging.info("Database already exists")
 
 
 create_users = """
@@ -37,4 +40,11 @@ create_subscriptions = f"CREATE TABLE subscriptions (user_id INT PRIMARY KEY, {'
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        # filename=os.path.join(basedir, "database_setup.log"),
+        # filemode="a",
+        format="[%(filename)s] %(asctime)s %(levelname)s %(message)s"
+    )
+
     main()

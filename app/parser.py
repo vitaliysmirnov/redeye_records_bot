@@ -17,27 +17,35 @@ from config import API_HOST, DB_PATH, REDEYE_URL, REDEYE_CDN, PARSER_JSON, api_k
 
 class Parser:
     """Parser is independent app module. Can be hosted anywhere"""
-    def __init__(self):
-        session = requests.Session()
-        request = session.get(REDEYE_URL, headers=headers)
-        soup = BeautifulSoup(request.content, "html.parser")
-        parser_json = dict()
-        for g in genre_ids:
-            genre = soup.find("a", attrs={"href": f"#{g}"}).text
-            parser_json[genre] = {}
-            genre_li = soup.find("ul", attrs={"id": g})
-            for li in genre_li.findAll("li"):
-                section = li.find("a").text
-                if "chart" not in li.find("a")["href"].lower() and "Pre-Order Releases" not in section:
-                    parser_json[genre][section] = {
-                        "url": li.find("a")["href"],
-                        "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {section}").lower()
-                    }
+    def __init__(self, init=False):
+        if init:
+            session = requests.Session()
+            request = session.get(REDEYE_URL, headers=headers)
+            soup = BeautifulSoup(request.content, "html.parser")
+            parser_json = dict()
+            for g in genre_ids:
+                genre = soup.find("a", attrs={"href": f"#{g}"}).text
+                parser_json[genre] = {}
+                genre_li = soup.find("ul", attrs={"id": g})
+                for li in genre_li.findAll("li"):
+                    section = li.find("a").text
+                    if "chart" not in li.find("a")["href"].lower() and "Pre-Order Releases" not in section:
+                        parser_json[genre][section] = {
+                            "url": li.find("a")["href"],
+                            "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {section}").lower()
+                        }
 
-        with open(PARSER_JSON, "w") as f:
-            json.dump(parser_json, f, indent=4)
+            with open(PARSER_JSON, "w") as f:
+                json.dump(parser_json, f, indent=4)
 
-        self.parser_json = parser_json
+            self.parser_json = parser_json
+        else:
+            try:
+                with open(PARSER_JSON) as json_file:
+                    self.parser_json = json.load(json_file)
+            except Exception as e:
+                logging.warning(e)
+                raise e
 
     def get_releases_from_url(self, url):
         """Get data from redeyerecords"""
@@ -145,6 +153,7 @@ class Parser:
 
     def check_new_releases(self):
         """Method that checks redeyerecords for new releases"""
+        logging.info(f"========== Session started at {datetime.now(timezone.utc)} ==========")
         db_connection = sqlite3.connect(DB_PATH)
         db_cursor = db_connection.cursor()
 
@@ -183,3 +192,4 @@ class Parser:
                             logging.warning(f"Can't reach API! Status code: {request.status_code}")
 
         db_connection.close()
+        logging.info(f"========== Session ended at {datetime.now(timezone.utc)} ==========")

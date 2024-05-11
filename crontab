@@ -1,0 +1,3 @@
+#
+*/5 * * * * /usr/local/bin/python /app/parser_worker.py
+#
