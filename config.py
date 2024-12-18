@@ -21,8 +21,6 @@ PARSER_JSON = os.path.join(basedir, "parser.json")
 APP_HOST = "https://redeyerecordsbot.ru/"
 API_HOST = APP_HOST + "api/v1"
 
-PARSER_COOL_DOWN = 300
-
 api_key_headers = {"x-api-key": API_KEY}
 
 headers = {
