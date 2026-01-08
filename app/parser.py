@@ -32,7 +32,7 @@ class Parser:
                     if "chart" not in li.find("a")["href"].lower() and "Pre-Order Releases" not in section:
                         parser_json[genre][section] = {
                             "url": li.find("a")["href"],
-                            "table": re.sub(r" / |-| & |\s+|% ", "_", f"{genre} {section}").lower()
+                            "table": re.sub(r"\s*[/&|%-]+\s*|\s+", "_", f"{genre} {section}").lower()
                         }
 
             with open(PARSER_JSON, "w") as f:
